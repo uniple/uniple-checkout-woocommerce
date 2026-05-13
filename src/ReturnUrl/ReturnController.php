@@ -79,6 +79,23 @@ final class ReturnController
             WC()->cart->empty_cart();
         }
 
+        // Cross-device thank-you support:
+        // uniple hosted checkout は QR で別 device から決済完了する flow が一般的
+        // (= PC で QR 表示 → スマホ wallet で送金 → 着地 URL がスマホ device)。
+        // mark this order key as authorized in transient (= 30 min TTL) なので、
+        // 続く /checkout/order-received/<id>/?key=<key> request で filter が
+        // この order に対してのみ verify を skip する。
+        // payment method check と hash_equals 検証は filter 側で行う。
+        set_transient(
+            'uniple_received_authorized_'.$orderId,
+            $expectedKey,
+            30 * MINUTE_IN_SECONDS
+        );
+        wc_get_logger()->info(
+            '[uniple-checkout] received authorized',
+            ['source' => 'uniple-checkout', 'order_id' => $orderId]
+        );
+
         wp_safe_redirect($order->get_checkout_order_received_url());
         exit;
     }
