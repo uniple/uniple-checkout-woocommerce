@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<ruleset name="uniple-checkout-woocommerce">
+    <description>Coding standards for uniple checkout for WooCommerce (preview, light ruleset).</description>
+
+    <file>./src</file>
+    <file>./uniple-checkout-woocommerce.php</file>
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/tests/stubs/*</exclude-pattern>
+    <exclude-pattern>*/build/*</exclude-pattern>
+
+    <arg value="psn"/>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+
+    <rule ref="PSR12">
+        <exclude name="PSR12.Files.FileHeader.SpacingAfterBlock"/>
+    </rule>
+</ruleset>
