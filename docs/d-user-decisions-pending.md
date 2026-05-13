@@ -1,6 +1,35 @@
 # D user 経営判断待ち事項 (= GitHub push 前 / F step 前)
 
-ステータス: **plugin Claude 単独前倒し work (= C/G/J/E/A/B/D/F/I/H step) 完了、 D user 判断待ち**
+ステータス: **2026-05-14 D user 7 判断票回答受領済、 GitHub push 前 credential 提供 + F step 前 LocalWP/credentials 物理作業のみ残**
+
+## 2026-05-14 D user 回答 sumamry
+
+| Q | 回答 |
+|---|---|
+| Q-WP-1 organization | uniple org (= 既存) を第 1 候補、 D user 確定要 |
+| Q-WP-2 public/private | sandbox smoke 完走前 = private、 完走後 public |
+| Q-WP-3 license | GPL-2.0-or-later |
+| Q-WP-4 tunnel | cloudflared named tunnel |
+| Q-WP-5 WP MerchantSite | name = `demo WP shop` / checkoutMode = `wc_only` |
+| Q-WP-6 UA preflight | 5/13 e2e で 5 row 記録済 (= uniple 本体 docs/ua-telemetry-preflight-2026-05-13.md)、 WP UA shape は F step smoke で自動確認 → **別 task 不要、 解消** |
+| Q-WP-7 WP.org submission | production 加盟店 1-2 件 実証後 (= 即提出 reviewer 指摘リスク回避) |
+
+= GitHub push GO (= Q-WP-1〜3 確定、 D user uniple org credential 提供後 即実行可)、 F step trigger = D user LocalWP + WP credentials 完了後
+
+---
+
+## LICENSE file 取り扱い (= codex 査読 2026-05-14)
+
+| phase | LICENSE file |
+|---|---|
+| private repo + sandbox smoke 前 (= 現状) | **不要** (= license metadata は plugin header + composer.json + readme.txt + README で宣言済) |
+| public 化前 / WP.org 提出前 | **追加推奨** (= GPLv2 配布時に license copy 同梱、 GitHub license badge 認識のため LICENSE / LICENSE.txt / COPYING のいずれか) |
+
+= 現 phase では LICENSE file 配置を見送り、 public 化 phase TODO とする。
+
+---
+
+## 以下、 当初 question 票 (= 履歴保存)
 
 ---
 

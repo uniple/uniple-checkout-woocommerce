@@ -100,7 +100,10 @@ uniple-hosted checkout. Plugin responsibilities:
 
 ## License
 
-GPL-2.0-or-later. See [LICENSE](LICENSE) when published.
+GPL-2.0-or-later. License metadata is declared in the main plugin file
+header, `composer.json`, and `readme.txt`. A full `LICENSE` text file is
+intentionally omitted while the repository is private; it will be added before
+the repository is made public and before WP.org plugin directory submission.
 
 ## Legal note (JPYC classification)
 
