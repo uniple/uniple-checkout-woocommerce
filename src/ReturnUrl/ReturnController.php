@@ -80,11 +80,17 @@ final class ReturnController
         }
 
         // Cross-device thank-you support:
-        // uniple hosted checkout は QR で別 device から決済完了する flow が一般的
-        // (= PC で QR 表示 → スマホ wallet で送金 → 着地 URL がスマホ device)。
-        // mark this order key as authorized in transient (= 30 min TTL) なので、
-        // 続く /checkout/order-received/<id>/?key=<key> request で filter が
-        // この order に対してのみ verify を skip する。
+        // uniple hosted checkout は PC QR → スマホ wallet 完走 path で、 uniple SSR は
+        // mobile cross-device 起点 (= `?wc=1&handoff=qr`) のときのみ完了画面に留まる
+        // (= uniple Codex 査読 r68 確定)。 mobile 単独 cart 着地 = `?wc=1` のみは
+        // successUrl 直行 default。
+        //
+        // WP 側 thank-you で WC 8.4.0+ の verify_known_shoppers filter が customer
+        // 紐付き order の known shopper mismatch を保護し「Please log in」 を表示する
+        // ため、 ReturnController で order_key hash_equals 検証済の時点で transient に
+        // expected key を 30 min 保持し、 後続 `/checkout/order-received/<id>/?key=<key>`
+        // request で Plugin::maybeSkipKnownShopperVerify が key 照合 + payment method
+        // 限定で per-request に verify を skip する。
         // payment method check と hash_equals 検証は filter 側で行う。
         set_transient(
             'uniple_received_authorized_'.$orderId,

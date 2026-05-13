@@ -30,14 +30,19 @@ final class Plugin
 
         // Cross-device thank-you support (= cf. ReturnController::handle())。
         // QR 決済で別 device から /checkout/order-received/<id>/?key=<key> に
-        // 着地した場合、 WC 標準は verify_known_shoppers=true で guest order を
-        // session で保護し「Please log in」 を表示する。
+        // 着地した場合、 WC 8.4.0+ で導入された
+        // `woocommerce_order_received_verify_known_shoppers` filter (default=true) が
+        // **customer_id ありの order の known shopper mismatch** を保護し
+        // 「Please log in」 を表示する (= 真の guest order は別経路で email verification
+        // 等が走るが、 customer 紐付き order でログインしていない / 別 user session の
+        // device から着地した場合がここに該当)。
+        //
         // ReturnController 経由で order_key hash_equals 検証済 transient が
         // 該当 order に立っていれば、 この request に限り verify を false に倒し、
         // EC-CUBE 4 plugin と同等の cross-device thank-you 表示を実現する。
         //
-        // WC 8.4+ で filter signature は `apply_filters(..., true)` の単一引数、
-        // order_id は渡らないので $_GET / query_var から自前で取得する。
+        // filter signature は WC 8.4.0+ で `apply_filters(..., true)` の単一引数、
+        // order_id は渡らないので get_query_var / $_GET から自前で取得する。
         add_filter(
             'woocommerce_order_received_verify_known_shoppers',
             [self::class, 'maybeSkipKnownShopperVerify']
@@ -73,6 +78,10 @@ final class Plugin
         if (!$order || $order->get_payment_method() !== self::PLUGIN_ID) {
             return $verify;
         }
+
+        // single-use: 認可済を確認したら即削除して再利用を防止
+        // (= codex r68 §3.2 任意改善、 transient TTL 30 min と二重 fail-safe)
+        delete_transient('uniple_received_authorized_'.$orderId);
 
         // この request 限定で verify skip (= filter は per-request)
         return false;
