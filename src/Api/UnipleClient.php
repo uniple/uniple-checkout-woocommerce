@@ -67,7 +67,7 @@ final class UnipleClient
         ]);
 
         if (is_wp_error($response)) {
-            throw new RuntimeException('uniple_session_unreachable: '.$response->get_error_message());
+            throw new RuntimeException('uniple_session_unreachable: '.esc_html((string) $response->get_error_message()));
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
@@ -76,7 +76,7 @@ final class UnipleClient
 
         if ($status !== 200 || !is_array($payload) || ($payload['ok'] ?? false) !== true) {
             throw new RuntimeException(
-                'uniple_session_failed: status='.$status.' body='.substr($raw, 0, 300)
+                'uniple_session_failed: status='.esc_html((string) $status).' body='.esc_html((string) substr($raw, 0, 300))
             );
         }
 
@@ -121,7 +121,7 @@ final class UnipleClient
         ]);
 
         if (is_wp_error($response)) {
-            throw new RuntimeException('uniple_session_lookup_network_error: '.$response->get_error_message());
+            throw new RuntimeException('uniple_session_lookup_network_error: '.esc_html((string) $response->get_error_message()));
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
@@ -129,7 +129,7 @@ final class UnipleClient
         $data = json_decode($raw, true);
 
         if (!is_array($data)) {
-            throw new RuntimeException('uniple_session_lookup_non_json: httpStatus='.$status);
+            throw new RuntimeException('uniple_session_lookup_non_json: httpStatus='.esc_html((string) $status));
         }
 
         $data['httpStatus'] = $status;
@@ -168,7 +168,7 @@ final class UnipleClient
         if (preg_match('/^(\d+)\.0+$/', $s, $m)) {
             return (int) $m[1];
         }
-        throw new InvalidArgumentException('amountJpyc not integer-compatible: '.$s);
+        throw new InvalidArgumentException('amountJpyc not integer-compatible: '.esc_html((string) $s));
     }
 
     public static function normalizeApiBaseUrl(?string $url): string
@@ -181,7 +181,7 @@ final class UnipleClient
             return rtrim($value, '/');
         }
 
-        $parts = parse_url($value);
+        $parts = wp_parse_url($value);
         $host = strtolower((string) ($parts['host'] ?? ''));
 
         return 'https://'.$host;
@@ -194,7 +194,7 @@ final class UnipleClient
             return false;
         }
 
-        $parts = parse_url($value);
+        $parts = wp_parse_url($value);
         if (!is_array($parts)) {
             return false;
         }
@@ -224,7 +224,7 @@ final class UnipleClient
             return false;
         }
 
-        $parts = parse_url($value);
+        $parts = wp_parse_url($value);
         if (!is_array($parts)) {
             return false;
         }

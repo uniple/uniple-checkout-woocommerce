@@ -7,18 +7,18 @@
 # 動作:
 #   1. git ls-files で tracked file のみ抽出 (= .git / vendor dev / node_modules 自動除外)
 #   2. runtime に不要な開発用 file / 内部 docs を除外
-#   3. WP plugin slug = uniple-checkout-woocommerce で root ディレクトリ化
+#   3. WP plugin slug = uniple-checkout-for-woocommerce で root ディレクトリ化
 #   4. zip 形式 (= WP.org plugin directory + 加盟店 manual install 標準)
 #   5. macOS の AppleDouble (._*) を除外
 #
-# 出力: <output_dir>/uniple-checkout-woocommerce-<version>.zip
+# 出力: <output_dir>/uniple-checkout-for-woocommerce-<version>.zip
 #       (= readme.txt の "Stable tag:" から version 取得)
 set -euo pipefail
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${PLUGIN_DIR}"
 
-SLUG="uniple-checkout-woocommerce"
+SLUG="uniple-checkout-for-woocommerce"
 
 VERSION=$(grep -E '^Stable tag:' readme.txt | head -n1 | awk '{print $3}')
 if [[ -z "${VERSION}" ]]; then

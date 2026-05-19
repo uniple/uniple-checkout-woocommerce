@@ -47,6 +47,27 @@ if (!function_exists('wp_unslash')) {
     }
 }
 
+if (!function_exists('wp_parse_url')) {
+    function wp_parse_url($url, $component = -1)
+    {
+        return $component === -1 ? parse_url((string) $url) : parse_url((string) $url, $component);
+    }
+}
+
+if (!function_exists('esc_html')) {
+    function esc_html($text): string
+    {
+        return htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('absint')) {
+    function absint($maybeint): int
+    {
+        return abs((int) $maybeint);
+    }
+}
+
 if (!function_exists('sanitize_text_field')) {
     function sanitize_text_field(string $value): string
     {

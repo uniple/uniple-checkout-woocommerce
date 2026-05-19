@@ -36,7 +36,7 @@ final class UnipleBlockSupport extends AbstractPaymentMethodType
     public function get_payment_method_script_handles(): array
     {
         $handle = 'uniple-checkout-blocks';
-        $assetUrl = plugins_url('assets/js/blocks-payment.js', dirname(__DIR__, 2).'/uniple-checkout-woocommerce.php');
+        $assetUrl = plugins_url('assets/js/blocks-payment.js', dirname(__DIR__, 2).'/uniple-checkout-for-woocommerce.php');
 
         wp_register_script(
             $handle,
@@ -47,7 +47,7 @@ final class UnipleBlockSupport extends AbstractPaymentMethodType
         );
 
         if (function_exists('wp_set_script_translations')) {
-            wp_set_script_translations($handle, 'uniple-checkout-woocommerce');
+            wp_set_script_translations($handle, 'uniple-checkout-for-woocommerce');
         }
 
         return [$handle];
@@ -60,9 +60,9 @@ final class UnipleBlockSupport extends AbstractPaymentMethodType
     {
         return [
             'name' => $this->name,
-            'title' => (string) ($this->settings['title'] ?? __('uniple checkout (JPYC)', 'uniple-checkout-woocommerce')),
-            'label' => (string) ($this->settings['title'] ?? __('uniple checkout (JPYC)', 'uniple-checkout-woocommerce')),
-            'description' => (string) ($this->settings['description'] ?? __('Pay with JPYC via uniple hosted checkout.', 'uniple-checkout-woocommerce')),
+            'title' => (string) ($this->settings['title'] ?? __('uniple checkout (JPYC)', 'uniple-checkout-for-woocommerce')),
+            'label' => (string) ($this->settings['title'] ?? __('uniple checkout (JPYC)', 'uniple-checkout-for-woocommerce')),
+            'description' => (string) ($this->settings['description'] ?? __('Pay with JPYC via uniple hosted checkout.', 'uniple-checkout-for-woocommerce')),
             'supports' => ['products'],
         ];
     }

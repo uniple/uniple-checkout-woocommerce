@@ -39,10 +39,12 @@ final class SettingsSanitizer
 
     public static function verifyNonceFromRequest(string $action, string $fieldName = '_wpnonce'): bool
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This helper reads the posted nonce field in order to verify it with wp_verify_nonce().
         if (!isset($_POST[$fieldName])) {
             return false;
         }
-        $nonce = sanitize_text_field((string) wp_unslash((string) $_POST[$fieldName]));
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- This helper reads the posted nonce field in order to verify it with wp_verify_nonce().
+        $nonce = sanitize_text_field((string) wp_unslash($_POST[$fieldName]));
 
         return (bool) wp_verify_nonce($nonce, $action);
     }

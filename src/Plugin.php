@@ -70,7 +70,8 @@ final class Plugin
             return $verify;
         }
 
-        $providedKey = isset($_GET['key']) ? (string) wp_unslash((string) $_GET['key']) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Payment gateway return landing; authenticated via WooCommerce order key (hash_equals); a nonce cannot be carried across the external checkout redirect.
+        $providedKey = isset($_GET['key']) ? sanitize_text_field((string) wp_unslash($_GET['key'])) : '';
         if ($providedKey === '' || !hash_equals($authorizedKey, $providedKey)) {
             return $verify;
         }
@@ -100,11 +101,8 @@ final class Plugin
         if ($fromQueryVar > 0) {
             return $fromQueryVar;
         }
-        if (isset($_GET['order-received'])) {
-            return (int) $_GET['order-received'];
-        }
-
-        return 0;
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Payment gateway return landing; authenticated via WooCommerce order key (hash_equals); a nonce cannot be carried across the external checkout redirect.
+        return isset($_GET['order-received']) ? absint(wp_unslash($_GET['order-received'])) : 0;
     }
 
     /**

@@ -25,10 +25,10 @@ final class UnipleGateway extends WC_Payment_Gateway
     public function __construct()
     {
         $this->id = Plugin::PLUGIN_ID;
-        $this->method_title = __('uniple checkout (JPYC)', 'uniple-checkout-woocommerce');
+        $this->method_title = __('uniple checkout (JPYC)', 'uniple-checkout-for-woocommerce');
         $this->method_description = __(
             'JPYC stablecoin hosted checkout, powered by uniple. Redirects to uniple checkout page.',
-            'uniple-checkout-woocommerce'
+            'uniple-checkout-for-woocommerce'
         );
         $this->has_fields = false;
         $this->supports = ['products'];
@@ -36,10 +36,10 @@ final class UnipleGateway extends WC_Payment_Gateway
         $this->init_form_fields();
         $this->init_settings();
 
-        $this->title = (string) $this->get_option('title', __('uniple checkout (JPYC)', 'uniple-checkout-woocommerce'));
+        $this->title = (string) $this->get_option('title', __('uniple checkout (JPYC)', 'uniple-checkout-for-woocommerce'));
         $this->description = (string) $this->get_option(
             'description',
-            __('Pay with JPYC via uniple hosted checkout.', 'uniple-checkout-woocommerce')
+            __('Pay with JPYC via uniple hosted checkout.', 'uniple-checkout-for-woocommerce')
         );
 
         add_action('woocommerce_update_options_payment_gateways_'.$this->id, [$this, 'process_admin_options']);
@@ -49,53 +49,53 @@ final class UnipleGateway extends WC_Payment_Gateway
     {
         $this->form_fields = [
             'enabled' => [
-                'title' => __('Enable / Disable', 'uniple-checkout-woocommerce'),
+                'title' => __('Enable / Disable', 'uniple-checkout-for-woocommerce'),
                 'type' => 'checkbox',
-                'label' => __('Enable uniple checkout (JPYC)', 'uniple-checkout-woocommerce'),
+                'label' => __('Enable uniple checkout (JPYC)', 'uniple-checkout-for-woocommerce'),
                 'default' => 'no',
             ],
             'title' => [
-                'title' => __('Title', 'uniple-checkout-woocommerce'),
+                'title' => __('Title', 'uniple-checkout-for-woocommerce'),
                 'type' => 'text',
-                'default' => __('uniple checkout (JPYC)', 'uniple-checkout-woocommerce'),
+                'default' => __('uniple checkout (JPYC)', 'uniple-checkout-for-woocommerce'),
                 'desc_tip' => true,
             ],
             'description' => [
-                'title' => __('Description', 'uniple-checkout-woocommerce'),
+                'title' => __('Description', 'uniple-checkout-for-woocommerce'),
                 'type' => 'textarea',
-                'default' => __('Pay with JPYC via uniple hosted checkout.', 'uniple-checkout-woocommerce'),
+                'default' => __('Pay with JPYC via uniple hosted checkout.', 'uniple-checkout-for-woocommerce'),
             ],
             'api_base_url' => [
-                'title' => __('API base URL', 'uniple-checkout-woocommerce'),
+                'title' => __('API base URL', 'uniple-checkout-for-woocommerce'),
                 'type' => 'text',
                 'default' => 'https://uniple.io',
                 'desc_tip' => true,
             ],
             'mode' => [
-                'title' => __('Mode', 'uniple-checkout-woocommerce'),
+                'title' => __('Mode', 'uniple-checkout-for-woocommerce'),
                 'type' => 'select',
                 'options' => [
-                    'live' => __('Live', 'uniple-checkout-woocommerce'),
-                    'test' => __('Test', 'uniple-checkout-woocommerce'),
+                    'live' => __('Live', 'uniple-checkout-for-woocommerce'),
+                    'test' => __('Test', 'uniple-checkout-for-woocommerce'),
                 ],
                 'default' => 'live',
             ],
             'merchant_label' => [
-                'title' => __('Merchant label', 'uniple-checkout-woocommerce'),
+                'title' => __('Merchant label', 'uniple-checkout-for-woocommerce'),
                 'type' => 'text',
                 'default' => '',
             ],
             'api_key' => [
-                'title' => __('API key', 'uniple-checkout-woocommerce'),
+                'title' => __('API key', 'uniple-checkout-for-woocommerce'),
                 'type' => 'password',
                 'default' => '',
-                'description' => __('Issued by uniple admin. Stored masked; re-enter to update.', 'uniple-checkout-woocommerce'),
+                'description' => __('Issued by uniple admin. Stored masked; re-enter to update.', 'uniple-checkout-for-woocommerce'),
             ],
             'webhook_secret' => [
-                'title' => __('Webhook secret', 'uniple-checkout-woocommerce'),
+                'title' => __('Webhook secret', 'uniple-checkout-for-woocommerce'),
                 'type' => 'password',
                 'default' => '',
-                'description' => __('HMAC-SHA256 webhook signing secret. Stored masked; re-enter to update.', 'uniple-checkout-woocommerce'),
+                'description' => __('HMAC-SHA256 webhook signing secret. Stored masked; re-enter to update.', 'uniple-checkout-for-woocommerce'),
             ],
         ];
     }
@@ -108,7 +108,7 @@ final class UnipleGateway extends WC_Payment_Gateway
     public function process_admin_options()
     {
         if (!SettingsSanitizer::userMayManage()) {
-            wc_add_notice(__('Insufficient permission.', 'uniple-checkout-woocommerce'), 'error');
+            wc_add_notice(__('Insufficient permission.', 'uniple-checkout-for-woocommerce'), 'error');
 
             return false;
         }
@@ -119,11 +119,15 @@ final class UnipleGateway extends WC_Payment_Gateway
 
         $postedApiBaseUrlKey = 'woocommerce_'.$this->id.'_api_base_url';
         $invalidApiBaseUrl = false;
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
         if (isset($_POST[$postedApiBaseUrlKey])) {
-            $postedApiBaseUrl = sanitize_text_field((string) wp_unslash((string) $_POST[$postedApiBaseUrlKey]));
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
+            $postedApiBaseUrl = sanitize_text_field((string) wp_unslash($_POST[$postedApiBaseUrlKey]));
             if (UnipleClient::isAllowedApiBaseUrl($postedApiBaseUrl)) {
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
                 $_POST[$postedApiBaseUrlKey] = UnipleClient::normalizeApiBaseUrl($postedApiBaseUrl);
             } else {
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
                 $_POST[$postedApiBaseUrlKey] = UnipleClient::isAllowedApiBaseUrl($existingApiBaseUrl)
                     ? UnipleClient::normalizeApiBaseUrl($existingApiBaseUrl)
                     : UnipleClient::DEFAULT_API_BASE_URL;
@@ -135,15 +139,17 @@ final class UnipleGateway extends WC_Payment_Gateway
 
         $postedKeyKey = 'woocommerce_'.$this->id.'_api_key';
         $postedSecretKey = 'woocommerce_'.$this->id.'_webhook_secret';
-        $postedKey = isset($_POST[$postedKeyKey]) ? (string) wp_unslash((string) $_POST[$postedKeyKey]) : '';
-        $postedSecret = isset($_POST[$postedSecretKey]) ? (string) wp_unslash((string) $_POST[$postedSecretKey]) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
+        $postedKey = isset($_POST[$postedKeyKey]) ? sanitize_text_field((string) wp_unslash($_POST[$postedKeyKey])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
+        $postedSecret = isset($_POST[$postedSecretKey]) ? sanitize_text_field((string) wp_unslash($_POST[$postedSecretKey])) : '';
 
         $this->update_option('api_key', SettingsSanitizer::preserveIfMasked($postedKey, $existingApiKey));
         $this->update_option('webhook_secret', SettingsSanitizer::preserveIfMasked($postedSecret, $existingSecret));
 
         if ($invalidApiBaseUrl) {
             wc_add_notice(
-                __('API base URL must be https://uniple.io or https://dev.uniple.io.', 'uniple-checkout-woocommerce'),
+                __('API base URL must be https://uniple.io or https://dev.uniple.io.', 'uniple-checkout-for-woocommerce'),
                 'error'
             );
 
@@ -192,7 +198,7 @@ final class UnipleGateway extends WC_Payment_Gateway
     {
         $order = wc_get_order($order_id);
         if (!$order instanceof WC_Order) {
-            wc_add_notice(__('Order not found.', 'uniple-checkout-woocommerce'), 'error');
+            wc_add_notice(__('Order not found.', 'uniple-checkout-for-woocommerce'), 'error');
 
             return null;
         }
@@ -206,7 +212,7 @@ final class UnipleGateway extends WC_Payment_Gateway
                 '[uniple-checkout] amount not integer JPYC: '.$e->getMessage(),
                 ['source' => 'uniple-checkout', 'order_id' => $order->get_id()]
             );
-            wc_add_notice(__('Order amount must be an integer JPYC value.', 'uniple-checkout-woocommerce'), 'error');
+            wc_add_notice(__('Order amount must be an integer JPYC value.', 'uniple-checkout-for-woocommerce'), 'error');
 
             return null;
         }
@@ -227,7 +233,7 @@ final class UnipleGateway extends WC_Payment_Gateway
                 'merchantOrderId' => (string) $order->get_id(),
                 'itemName' => sprintf(
                     /* translators: %s: order number */
-                    __('WooCommerce order #%s', 'uniple-checkout-woocommerce'),
+                    __('WooCommerce order #%s', 'uniple-checkout-for-woocommerce'),
                     (string) $order->get_order_number()
                 ),
                 'successUrl' => $returnUrl,
@@ -239,14 +245,14 @@ final class UnipleGateway extends WC_Payment_Gateway
                 '[uniple-checkout] createSession failed: '.$e->getMessage(),
                 ['source' => 'uniple-checkout', 'order_id' => $order->get_id()]
             );
-            wc_add_notice(__('Payment gateway is temporarily unavailable. Please try again.', 'uniple-checkout-woocommerce'), 'error');
+            wc_add_notice(__('Payment gateway is temporarily unavailable. Please try again.', 'uniple-checkout-for-woocommerce'), 'error');
 
             return null;
         }
 
         $order->update_meta_data('_uniple_session_id', $session['sessionId']);
         $order->update_meta_data('_uniple_pay_id', $session['payId']);
-        $order->update_status('pending', __('uniple checkout session created.', 'uniple-checkout-woocommerce'));
+        $order->update_status('pending', __('uniple checkout session created.', 'uniple-checkout-for-woocommerce'));
         $order->save();
 
         return [

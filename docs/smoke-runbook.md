@@ -18,7 +18,7 @@
 
 ## 1. plugin install
 
-1. `bin/build-zip.sh build` で `build/uniple-checkout-woocommerce-0.1.0.zip` 生成
+1. `bin/build-zip.sh build` で `build/uniple-checkout-for-woocommerce-0.1.0.zip` 生成
 2. WP admin → Plugins → Add New → Upload Plugin → 上記 zip upload
 3. Activate
 4. 確認:

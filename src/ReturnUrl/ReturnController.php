@@ -25,8 +25,10 @@ final class ReturnController
 {
     public static function handle(): void
     {
-        $orderId = isset($_GET['order_id']) ? (int) $_GET['order_id'] : 0;
-        $providedKey = isset($_GET['key']) ? sanitize_text_field((string) wp_unslash((string) $_GET['key'])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Payment gateway return URL; authenticated via WooCommerce order key (hash_equals); a nonce cannot be carried across the external checkout redirect.
+        $orderId = isset($_GET['order_id']) ? absint(wp_unslash($_GET['order_id'])) : 0;
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Payment gateway return URL; authenticated via WooCommerce order key (hash_equals); a nonce cannot be carried across the external checkout redirect.
+        $providedKey = isset($_GET['key']) ? sanitize_text_field((string) wp_unslash($_GET['key'])) : '';
         if ($orderId <= 0 || $providedKey === '') {
             wp_safe_redirect(home_url('/'));
             exit;
@@ -61,7 +63,7 @@ final class ReturnController
                                 $order->add_order_note(
                                     sprintf(
                                         /* translators: %s: session id */
-                                        __('uniple checkout completed via option C live lookup (session=%s).', 'uniple-checkout-woocommerce'),
+                                        __('uniple checkout completed via option C live lookup (session=%s).', 'uniple-checkout-for-woocommerce'),
                                         $sessionId
                                     )
                                 );

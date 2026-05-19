@@ -34,14 +34,14 @@ JPYC stablecoin hosted checkout for WooCommerce, powered by [uniple](https://uni
 ```bash
 git clone <repo-url> uniple-checkout-woocommerce
 cd uniple-checkout-woocommerce
-bin/build-zip.sh build      # produces build/uniple-checkout-woocommerce-<ver>.zip
+bin/build-zip.sh build      # produces build/uniple-checkout-for-woocommerce-<ver>.zip
 ```
 
 Then in WordPress: `Plugins → Add New → Upload Plugin` and upload the built zip.
 
 ### From source
 
-Copy this directory into `wp-content/plugins/uniple-checkout-woocommerce/` and
+Copy this directory into `wp-content/plugins/uniple-checkout-for-woocommerce/` and
 `composer install --no-dev --optimize-autoloader` from the plugin root.
 
 ## Configuration

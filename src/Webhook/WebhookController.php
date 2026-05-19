@@ -150,7 +150,7 @@ final class WebhookController
                 $order->add_order_note(
                     sprintf(
                         /* translators: 1: session id, 2: tx hash */
-                        __('uniple checkout completed (session=%1$s, tx=%2$s).', 'uniple-checkout-woocommerce'),
+                        __('uniple checkout completed (session=%1$s, tx=%2$s).', 'uniple-checkout-for-woocommerce'),
                         $sessionId,
                         $txHash !== '' ? $txHash : '-'
                     )
