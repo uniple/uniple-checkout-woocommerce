@@ -52,7 +52,7 @@ final class ReturnController
                         $live = $client->getCheckoutSession($sessionId);
                         $item = is_array($live['item'] ?? null) ? $live['item'] : [];
                         $liveStatus = (string) ($item['status'] ?? '');
-                        if ($liveStatus === 'completed') {
+                        if ($liveStatus === 'completed' && self::completedItemMatchesOrder($item, $order, $client, $orderId, $sessionId)) {
                             $txHash = (string) ($item['txHash'] ?? $item['transactionId'] ?? '');
                             if (!$order->is_paid()) {
                                 $order->payment_complete($txHash !== '' ? $txHash : $sessionId);
@@ -104,6 +104,61 @@ final class ReturnController
 
         wp_safe_redirect($order->get_checkout_order_received_url());
         exit;
+    }
+
+    /**
+     * @param array<string,mixed> $item
+     */
+    private static function completedItemMatchesOrder(array $item, \WC_Order $order, UnipleClient $client, int $orderId, string $sessionId): bool
+    {
+        $clientReferenceId = (string) (
+            $item['clientReferenceId']
+            ?? $item['client_reference_id']
+            ?? $item['merchantOrderId']
+            ?? ''
+        );
+        if ($clientReferenceId === '' || !hash_equals((string) $orderId, $clientReferenceId)) {
+            wc_get_logger()->warning(
+                '[uniple-checkout] return option C client reference mismatch',
+                [
+                    'source' => 'uniple-checkout',
+                    'order_id' => $orderId,
+                    'session_id' => $sessionId,
+                    'got' => $clientReferenceId,
+                ]
+            );
+
+            return false;
+        }
+
+        try {
+            $actualAmount = $client->toIntegerJpyc($item['amountJpyc'] ?? $item['amount_jpyc'] ?? null);
+            $expectedAmount = $client->toIntegerJpyc($order->get_total());
+        } catch (\InvalidArgumentException $e) {
+            wc_get_logger()->warning(
+                '[uniple-checkout] return option C amount missing or invalid: '.$e->getMessage(),
+                ['source' => 'uniple-checkout', 'order_id' => $orderId, 'session_id' => $sessionId]
+            );
+
+            return false;
+        }
+
+        if ($actualAmount !== $expectedAmount) {
+            wc_get_logger()->warning(
+                '[uniple-checkout] return option C amount mismatch',
+                [
+                    'source' => 'uniple-checkout',
+                    'order_id' => $orderId,
+                    'session_id' => $sessionId,
+                    'expected' => $expectedAmount,
+                    'actual' => $actualAmount,
+                ]
+            );
+
+            return false;
+        }
+
+        return true;
     }
 
     private static function resolveGateway(): ?UnipleGateway

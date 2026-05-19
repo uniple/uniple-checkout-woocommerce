@@ -92,6 +92,43 @@ final class WebhookController
             return new WP_REST_Response(['error' => 'session_mismatch'], 409);
         }
 
+        try {
+            $actualAmount = $client->toIntegerJpyc($data['amountJpyc'] ?? $data['amount_jpyc'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            wc_get_logger()->warning(
+                '[uniple-checkout] webhook amount missing or invalid: '.$e->getMessage(),
+                ['source' => 'uniple-checkout', 'order_id' => $orderId, 'session_id' => $sessionId]
+            );
+
+            return new WP_REST_Response(['error' => 'amount_missing_or_invalid'], 400);
+        }
+
+        try {
+            $expectedAmount = $client->toIntegerJpyc($order->get_total());
+        } catch (\InvalidArgumentException $e) {
+            wc_get_logger()->error(
+                '[uniple-checkout] order amount invalid: '.$e->getMessage(),
+                ['source' => 'uniple-checkout', 'order_id' => $orderId, 'session_id' => $sessionId]
+            );
+
+            return new WP_REST_Response(['error' => 'order_amount_invalid'], 409);
+        }
+
+        if ($actualAmount !== $expectedAmount) {
+            wc_get_logger()->warning(
+                '[uniple-checkout] webhook amount mismatch',
+                [
+                    'source' => 'uniple-checkout',
+                    'order_id' => $orderId,
+                    'session_id' => $sessionId,
+                    'expected' => $expectedAmount,
+                    'actual' => $actualAmount,
+                ]
+            );
+
+            return new WP_REST_Response(['error' => 'amount_mismatch'], 409);
+        }
+
         if (!self::acquireLock($orderId)) {
             return new WP_REST_Response(['ok' => true, 'queued' => true], 202);
         }

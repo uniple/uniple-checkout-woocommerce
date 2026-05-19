@@ -16,6 +16,8 @@ use RuntimeException;
  */
 final class UnipleClient
 {
+    public const DEFAULT_API_BASE_URL = 'https://uniple.io';
+    public const ALLOWED_UNIPLE_HOSTS = ['uniple.io', 'dev.uniple.io'];
     public const TIMEOUT_SECONDS = 5;
 
     /**
@@ -83,6 +85,9 @@ final class UnipleClient
 
         if ($sessionId === '' || $checkoutUrl === '') {
             throw new RuntimeException('uniple_session_missing_url');
+        }
+        if (!self::isAllowedUnipleOrigin($checkoutUrl)) {
+            throw new RuntimeException('uniple_session_invalid_checkout_url');
         }
 
         return [
@@ -164,6 +169,88 @@ final class UnipleClient
         throw new InvalidArgumentException('amountJpyc not integer-compatible: '.$s);
     }
 
+    public static function normalizeApiBaseUrl(?string $url): string
+    {
+        $value = trim((string) $url);
+        if ($value === '') {
+            return self::DEFAULT_API_BASE_URL;
+        }
+        if (!self::isAllowedApiBaseUrl($value)) {
+            return rtrim($value, '/');
+        }
+
+        $parts = parse_url($value);
+        $host = strtolower((string) ($parts['host'] ?? ''));
+
+        return 'https://'.$host;
+    }
+
+    public static function isAllowedApiBaseUrl(?string $url): bool
+    {
+        $value = trim((string) $url);
+        if ($value === '') {
+            return false;
+        }
+
+        $parts = parse_url($value);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower(rtrim((string) ($parts['host'] ?? ''), '.'));
+        $path = (string) ($parts['path'] ?? '');
+        $port = isset($parts['port']) ? (int) $parts['port'] : 443;
+
+        if ($scheme !== 'https' || $host === '' || $port !== 443) {
+            return false;
+        }
+        if (isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
+            return false;
+        }
+        if ($path !== '' && $path !== '/') {
+            return false;
+        }
+
+        return self::isAllowedUnipleHost($host);
+    }
+
+    public static function isAllowedUnipleOrigin(?string $url): bool
+    {
+        $value = trim((string) $url);
+        if ($value === '') {
+            return false;
+        }
+
+        $parts = parse_url($value);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower(rtrim((string) ($parts['host'] ?? ''), '.'));
+        $port = isset($parts['port']) ? (int) ($parts['port']) : 443;
+
+        if ($scheme !== 'https' || $host === '' || $port !== 443) {
+            return false;
+        }
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            return false;
+        }
+
+        return self::isAllowedUnipleHost($host);
+    }
+
+    public static function isAllowedUnipleHost(string $host): bool
+    {
+        $host = strtolower(rtrim(trim($host, "[] \t\n\r\0\x0B"), '.'));
+        if ($host === '' || self::isBlockedIpOrLocalhost($host)) {
+            return false;
+        }
+
+        return in_array($host, self::ALLOWED_UNIPLE_HOSTS, true);
+    }
+
     /**
      * @param array<string,string> $extra
      *
@@ -180,8 +267,27 @@ final class UnipleClient
 
     private function endpoint(string $path): string
     {
-        $base = rtrim($this->config['api_base_url'] !== '' ? $this->config['api_base_url'] : 'https://uniple.io', '/');
+        $configuredBase = (string) ($this->config['api_base_url'] ?? '');
+        $base = $configuredBase !== '' ? $configuredBase : self::DEFAULT_API_BASE_URL;
+        if (!self::isAllowedApiBaseUrl($base)) {
+            throw new RuntimeException('uniple_api_base_url_not_allowed');
+        }
+        $base = self::normalizeApiBaseUrl($base);
 
         return $base.$path;
+    }
+
+    private static function isBlockedIpOrLocalhost(string $host): bool
+    {
+        if ($host === 'localhost' || substr($host, -10) === '.localhost') {
+            return true;
+        }
+
+        $ip = trim($host, '[]');
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
     }
 }

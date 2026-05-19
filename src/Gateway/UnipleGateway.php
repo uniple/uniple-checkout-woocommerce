@@ -113,6 +113,21 @@ final class UnipleGateway extends WC_Payment_Gateway
 
         $existingApiKey = (string) $this->get_option('api_key', '');
         $existingSecret = (string) $this->get_option('webhook_secret', '');
+        $existingApiBaseUrl = (string) $this->get_option('api_base_url', UnipleClient::DEFAULT_API_BASE_URL);
+
+        $postedApiBaseUrlKey = 'woocommerce_'.$this->id.'_api_base_url';
+        $invalidApiBaseUrl = false;
+        if (isset($_POST[$postedApiBaseUrlKey])) {
+            $postedApiBaseUrl = sanitize_text_field((string) wp_unslash((string) $_POST[$postedApiBaseUrlKey]));
+            if (UnipleClient::isAllowedApiBaseUrl($postedApiBaseUrl)) {
+                $_POST[$postedApiBaseUrlKey] = UnipleClient::normalizeApiBaseUrl($postedApiBaseUrl);
+            } else {
+                $_POST[$postedApiBaseUrlKey] = UnipleClient::isAllowedApiBaseUrl($existingApiBaseUrl)
+                    ? UnipleClient::normalizeApiBaseUrl($existingApiBaseUrl)
+                    : UnipleClient::DEFAULT_API_BASE_URL;
+                $invalidApiBaseUrl = true;
+            }
+        }
 
         $result = parent::process_admin_options();
 
@@ -123,6 +138,15 @@ final class UnipleGateway extends WC_Payment_Gateway
 
         $this->update_option('api_key', SettingsSanitizer::preserveIfMasked($postedKey, $existingApiKey));
         $this->update_option('webhook_secret', SettingsSanitizer::preserveIfMasked($postedSecret, $existingSecret));
+
+        if ($invalidApiBaseUrl) {
+            wc_add_notice(
+                __('API base URL must be https://uniple.io or https://dev.uniple.io.', 'uniple-checkout-woocommerce'),
+                'error'
+            );
+
+            return false;
+        }
 
         return $result;
     }

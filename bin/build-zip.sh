@@ -40,6 +40,9 @@ git ls-files | while IFS= read -r f; do
         bin/*|tests/*|.github/*|phpcs.xml|phpcs.xml.dist|phpunit.xml|phpunit.xml.dist|composer.lock|.gitignore|.gitattributes)
             continue
             ;;
+        docs/smoke-runbook.md|docs/d-user-decisions-pending.md|docs/github-org-setup-guide.md|docs/*relay*)
+            continue
+            ;;
     esac
     dest="${STAGE_PLUGIN_DIR}/${f}"
     mkdir -p "$(dirname "${dest}")"

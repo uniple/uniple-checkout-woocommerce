@@ -65,6 +65,32 @@ final class UnipleClientPureTest extends TestCase
         $this->makeClient()->toIntegerJpyc('abc');
     }
 
+    public function testApiBaseUrlAllowlist(): void
+    {
+        self::assertTrue(UnipleClient::isAllowedApiBaseUrl('https://uniple.io'));
+        self::assertTrue(UnipleClient::isAllowedApiBaseUrl('https://dev.uniple.io/'));
+        self::assertTrue(UnipleClient::isAllowedApiBaseUrl('https://uniple.io:443'));
+        self::assertSame('https://dev.uniple.io', UnipleClient::normalizeApiBaseUrl('https://dev.uniple.io/'));
+
+        self::assertFalse(UnipleClient::isAllowedApiBaseUrl('http://uniple.io'));
+        self::assertFalse(UnipleClient::isAllowedApiBaseUrl('https://evil.example'));
+        self::assertFalse(UnipleClient::isAllowedApiBaseUrl('https://api.uniple.io'));
+        self::assertFalse(UnipleClient::isAllowedApiBaseUrl('https://uniple.io/api'));
+        self::assertFalse(UnipleClient::isAllowedApiBaseUrl('https://uniple.io?x=1'));
+        self::assertFalse(UnipleClient::isAllowedApiBaseUrl('https://127.0.0.1'));
+    }
+
+    public function testCheckoutUrlAllowlist(): void
+    {
+        self::assertTrue(UnipleClient::isAllowedUnipleOrigin('https://uniple.io/checkout/ucs_test'));
+        self::assertTrue(UnipleClient::isAllowedUnipleOrigin('https://dev.uniple.io/checkout/ucs_test?wc=1'));
+
+        self::assertFalse(UnipleClient::isAllowedUnipleOrigin('http://uniple.io/checkout/ucs_test'));
+        self::assertFalse(UnipleClient::isAllowedUnipleOrigin('https://evil.example/checkout/ucs_test'));
+        self::assertFalse(UnipleClient::isAllowedUnipleOrigin('https://user:pass@uniple.io/checkout/ucs_test'));
+        self::assertFalse(UnipleClient::isAllowedUnipleOrigin('https://uniple.io:444/checkout/ucs_test'));
+    }
+
     public function testVerifySignatureAcceptsValid(): void
     {
         $client = $this->makeClient('whsec_test');

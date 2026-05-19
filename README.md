@@ -94,7 +94,6 @@ uniple-hosted checkout. Plugin responsibilities:
 |---|---|
 | [`docs/merchant-integration-spec.md`](docs/merchant-integration-spec.md) | Merchant-facing integration spec |
 | [`docs/migration-notes.md`](docs/migration-notes.md) | Release history & migration notes from 0.1.0 |
-| [`docs/smoke-runbook.md`](docs/smoke-runbook.md) | F-step smoke procedure (draft) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Version-tagged release notes |
 | [`readme.txt`](readme.txt) | WP.org plugin directory manifest |
 
