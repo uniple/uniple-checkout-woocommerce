@@ -13,6 +13,8 @@ declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
+defined('ABSPATH') || define('ABSPATH', __DIR__.'/wp/');
+
 require_once __DIR__.'/stubs/wp-stubs.php';
 require_once __DIR__.'/../src/Plugin.php';
 require_once __DIR__.'/../src/Api/UserAgent.php';

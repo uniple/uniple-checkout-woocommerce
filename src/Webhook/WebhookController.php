@@ -9,6 +9,8 @@ use Uniple\CheckoutWooCommerce\Gateway\UnipleGateway;
 use WP_REST_Request;
 use WP_REST_Response;
 
+defined('ABSPATH') || exit;
+
 /**
  * REST /wp-json/uniple/v1/webhook handler。
  *

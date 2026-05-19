@@ -9,6 +9,8 @@ use Uniple\CheckoutWooCommerce\Gateway\UnipleGateway;
 use Uniple\CheckoutWooCommerce\ReturnUrl\ReturnController;
 use Uniple\CheckoutWooCommerce\Webhook\WebhookController;
 
+defined('ABSPATH') || exit;
+
 final class Plugin
 {
     public const VERSION = '0.1.0';

@@ -7,6 +7,8 @@ namespace Uniple\CheckoutWooCommerce\Gateway;
 use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
 use Uniple\CheckoutWooCommerce\Plugin;
 
+defined('ABSPATH') || exit;
+
 /**
  * WC Blocks (= Cart / Checkout Blocks) 経路用 redirect-only payment method。
  *

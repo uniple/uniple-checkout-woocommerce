@@ -10,6 +10,8 @@ use Uniple\CheckoutWooCommerce\Plugin;
 use WC_Order;
 use WC_Payment_Gateway;
 
+defined('ABSPATH') || exit;
+
 /**
  * WC_Payment_Gateway 継承の uniple checkout gateway。
  *

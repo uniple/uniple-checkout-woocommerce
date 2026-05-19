@@ -8,6 +8,8 @@ use Uniple\CheckoutWooCommerce\Api\UnipleClient;
 use Uniple\CheckoutWooCommerce\Gateway\UnipleGateway;
 use Uniple\CheckoutWooCommerce\Webhook\WebhookController;
 
+defined('ABSPATH') || exit;
+
 /**
  * Hosted Checkout からの return URL handler。
  *

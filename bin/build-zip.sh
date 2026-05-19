@@ -6,7 +6,7 @@
 #
 # 動作:
 #   1. git ls-files で tracked file のみ抽出 (= .git / vendor dev / node_modules 自動除外)
-#   2. composer install --no-dev --optimize-autoloader で vendor 生成
+#   2. runtime に不要な開発用 file / 内部 docs を除外
 #   3. WP plugin slug = uniple-checkout-woocommerce で root ディレクトリ化
 #   4. zip 形式 (= WP.org plugin directory + 加盟店 manual install 標準)
 #   5. macOS の AppleDouble (._*) を除外
@@ -37,10 +37,7 @@ mkdir -p "${STAGE_PLUGIN_DIR}"
 
 git ls-files | while IFS= read -r f; do
     case "$f" in
-        bin/*|tests/*|.github/*|phpcs.xml|phpcs.xml.dist|phpunit.xml|phpunit.xml.dist|composer.lock|.gitignore|.gitattributes)
-            continue
-            ;;
-        docs/smoke-runbook.md|docs/d-user-decisions-pending.md|docs/github-org-setup-guide.md|docs/*relay*)
+        bin/*|tests/*|.github/*|docs/*|README.md|phpcs.xml|phpcs.xml.dist|phpunit.xml|phpunit.xml.dist|composer.json|composer.lock|.gitignore|.gitattributes)
             continue
             ;;
     esac
@@ -48,14 +45,6 @@ git ls-files | while IFS= read -r f; do
     mkdir -p "$(dirname "${dest}")"
     cp -p "$f" "${dest}"
 done
-
-if command -v composer >/dev/null 2>&1; then
-    (
-        cd "${STAGE_PLUGIN_DIR}"
-        composer install --no-dev --optimize-autoloader --no-interaction --quiet
-        rm -f composer.lock
-    )
-fi
 
 OUTPUT_ZIP="${OUTPUT_DIR}/${SLUG}-${VERSION}.zip"
 rm -f "${OUTPUT_ZIP}"

@@ -6,6 +6,8 @@ namespace Uniple\CheckoutWooCommerce\Api;
 
 use Uniple\CheckoutWooCommerce\Plugin;
 
+defined('ABSPATH') || exit;
+
 final class UserAgent
 {
     public static function build(): string

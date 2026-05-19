@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Uniple\CheckoutWooCommerce\Admin;
 
+defined('ABSPATH') || exit;
+
 /**
  * Admin settings 用 sanitize / mask helper。
  *

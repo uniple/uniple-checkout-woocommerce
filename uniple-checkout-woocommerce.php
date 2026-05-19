@@ -2,16 +2,19 @@
 /**
  * Plugin Name: uniple checkout for WooCommerce
  * Plugin URI: https://uniple.io/
- * Description: JPYC stablecoin hosted checkout for WooCommerce, powered by uniple.
+ * Description: JPYC hosted checkout for WooCommerce, powered by uniple.
  * Version: 0.1.0
- * Requires PHP: 8.1
  * Requires at least: 6.4
- * WC requires at least: 8.5
- * WC tested up to: 8.7
+ * Requires PHP: 8.1
+ * Author: uniple
+ * Author URI: https://uniple.io/
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: uniple-checkout-woocommerce
  * Domain Path: /languages
- * License: GPL-2.0-or-later
- * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Requires Plugins: woocommerce
+ * WC requires at least: 8.5
+ * WC tested up to: 10.7
  */
 
 declare(strict_types=1);

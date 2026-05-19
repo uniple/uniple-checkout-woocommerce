@@ -7,6 +7,8 @@ namespace Uniple\CheckoutWooCommerce\Api;
 use InvalidArgumentException;
 use RuntimeException;
 
+defined('ABSPATH') || exit;
+
 /**
  * uniple Merchant API thin client for WooCommerce.
  *
