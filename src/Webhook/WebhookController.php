@@ -14,7 +14,7 @@ use WP_REST_Response;
  *
  * - permission_callback = __return_true (= 公開 endpoint、 認証は HMAC で行う)
  * - raw body + hash_equals で signature 検証
- * - idempotency = WC order meta (`_uniple_completed_event_ids`) に永続記録 +
+ * - idempotency = event:sessionId key を WC order meta (`_uniple_completed_event_ids`) に永続記録 +
  *   短期 transient で同時受信時の race lock (= 60 秒 SETNX 相当)
  * - paid 確定経路 = `$order->payment_complete($txHash)` (= paid date / lifecycle 整合)
  */
@@ -59,17 +59,21 @@ final class WebhookController
             return new WP_REST_Response(['error' => 'invalid_payload'], 400);
         }
 
-        $eventId = (string) ($payload['eventId'] ?? $payload['id'] ?? '');
-        $type = (string) ($payload['type'] ?? '');
+        $type = (string) ($payload['event'] ?? $payload['type'] ?? '');
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : $payload;
         $sessionId = (string) ($data['sessionId'] ?? '');
         $clientReferenceId = (string) ($data['clientReferenceId'] ?? '');
-        $status = (string) ($data['status'] ?? '');
         $txHash = (string) ($data['txHash'] ?? $data['transactionId'] ?? '');
 
-        if ($type !== 'checkout.session.completed' || $status !== 'completed' || $sessionId === '' || $clientReferenceId === '') {
+        if (
+            $type !== 'checkout.session.completed'
+            || $sessionId === ''
+            || $clientReferenceId === ''
+        ) {
             return new WP_REST_Response(['ok' => true, 'ignored' => true], 200);
         }
+
+        $idempotencyKey = $type.':'.$sessionId;
 
         $orderId = (int) $clientReferenceId;
         $order = wc_get_order($orderId);
@@ -135,7 +139,7 @@ final class WebhookController
 
         try {
             $processed = (array) ($order->get_meta(self::META_EVENT_IDS, true) ?: []);
-            if ($eventId !== '' && in_array($eventId, $processed, true)) {
+            if (in_array($idempotencyKey, $processed, true)) {
                 return new WP_REST_Response(['ok' => true, 'duplicate' => true], 200);
             }
 
@@ -151,11 +155,9 @@ final class WebhookController
                 );
             }
 
-            if ($eventId !== '') {
-                $processed[] = $eventId;
-                $order->update_meta_data(self::META_EVENT_IDS, array_slice($processed, -50));
-                $order->save();
-            }
+            $processed[] = $idempotencyKey;
+            $order->update_meta_data(self::META_EVENT_IDS, array_slice($processed, -50));
+            $order->save();
         } finally {
             self::releaseLock($orderId);
         }
