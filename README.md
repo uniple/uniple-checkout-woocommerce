@@ -2,9 +2,8 @@
 
 JPYC stablecoin hosted checkout for WooCommerce, powered by [uniple](https://uniple.io/).
 
-> **Preview release (0.1.0)** — installable but not yet smoked end-to-end in
-> production-like sandbox. Public store submission and merchant onboarding will
-> follow the F step smoke sign-off.
+> **Phase 1 release (0.1.2)** — WordPress.org / GitHub release preparation
+> package for the WooCommerce uniple checkout plugin.
 
 ## Status
 
@@ -15,9 +14,9 @@ JPYC stablecoin hosted checkout for WooCommerce, powered by [uniple](https://uni
 - ✅ Return URL handler with order-key verification + option C live lookup
   fallback
 - ✅ Plugin-aware `User-Agent` telemetry hint
-- ⏳ Sandbox smoke (50 JPYC end-to-end across classic / Blocks × HPOS on / off)
-- ⏳ WP.org submission package + screenshots
-- ⏳ Localized translations (`languages/`)
+- ✅ Japanese translation bundle (`languages/`)
+- ✅ GPLv2-or-later `LICENSE` bundled
+- ✅ Release packaging and version consistency checks
 
 ## Requirements
 
@@ -97,12 +96,17 @@ uniple-hosted checkout. Plugin responsibilities:
 | [`CHANGELOG.md`](CHANGELOG.md) | Version-tagged release notes |
 | [`readme.txt`](readme.txt) | WP.org plugin directory manifest |
 
+## Support
+
+- 加盟店申請: https://forms.gle/b8kwVZeynA1ffV8j6
+- Bug reports / questions: support@uniple.io
+- WordPress.org page: https://wordpress.org/plugins/uniple-checkout-for-woocommerce/
+
 ## License
 
 GPL-2.0-or-later. License metadata is declared in the main plugin file
-header, `composer.json`, and `readme.txt`. A full `LICENSE` text file is
-intentionally omitted while the repository is private; it will be added before
-the repository is made public and before WP.org plugin directory submission.
+header, `composer.json`, and `readme.txt`; the full GPLv2-or-later license text
+is bundled in [`LICENSE`](LICENSE).
 
 ## Legal note (JPYC classification)
 

@@ -37,7 +37,7 @@ mkdir -p "${STAGE_PLUGIN_DIR}"
 
 git ls-files | while IFS= read -r f; do
     case "$f" in
-        bin/*|tests/*|.github/*|docs/*|README.md|phpcs.xml|phpcs.xml.dist|phpunit.xml|phpunit.xml.dist|composer.json|composer.lock|.gitignore|.gitattributes)
+        bin/*|tests/*|.github/*|docs/*|phpcs.xml|phpcs.xml.dist|phpunit.xml|phpunit.xml.dist|composer.json|composer.lock|.gitignore|.gitattributes)
             continue
             ;;
     esac
