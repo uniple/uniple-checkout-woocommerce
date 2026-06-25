@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-06-25
+
+### Fixed
+
+- Save x402 AI purchase target checkboxes from the normal WooCommerce settings save action, including the all-unchecked state.
+- Show the latest x402 product sync result directly below the sync button.
+
 ## [0.1.6] - 2026-06-25
 
 ### Added

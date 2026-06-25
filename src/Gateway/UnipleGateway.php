@@ -40,6 +40,9 @@ defined('ABSPATH') || exit;
  */
 final class UnipleGateway extends WC_Payment_Gateway
 {
+    private const X402_LAST_SYNC_MESSAGE_OPTION = 'uniple_x402_last_sync_message';
+    private const X402_LAST_SYNC_ERROR_OPTION = 'uniple_x402_last_sync_error';
+
     public function __construct()
     {
         $this->id = Plugin::PLUGIN_ID;
@@ -201,8 +204,11 @@ final class UnipleGateway extends WC_Payment_Gateway
         $syncKey = 'woocommerce_'.$this->id.'_x402_sync';
         $settingsKey = 'woocommerce_'.$this->id.'_x402_settings_save';
         $enabledKey = 'woocommerce_'.$this->id.'_x402_ai_enabled';
+        $presentKey = 'woocommerce_'.$this->id.'_x402_ai_enabled_present';
+        $settingsRequested = isset($_POST[$settingsKey]) || isset($_POST[$presentKey]);
+        $shouldSync = false;
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
-        if (isset($_POST[$settingsKey])) {
+        if ($settingsRequested) {
             // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
             $enabled = isset($_POST[$enabledKey]) && is_array($_POST[$enabledKey])
                 ? array_map('sanitize_text_field', wp_unslash($_POST[$enabledKey]))
@@ -211,10 +217,14 @@ final class UnipleGateway extends WC_Payment_Gateway
             if (class_exists('\WC_Admin_Settings')) {
                 \WC_Admin_Settings::add_message(sprintf('AI購入対象設定を保存しました。対象商品: %d件', $saved));
             }
-            $this->runX402ProductSync();
+            $shouldSync = true;
         }
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
         if (isset($_POST[$syncKey])) {
+            $shouldSync = true;
+        }
+
+        if ($shouldSync) {
             $this->runX402ProductSync();
         }
 
@@ -262,6 +272,15 @@ final class UnipleGateway extends WC_Payment_Gateway
         $buttonName = esc_attr('woocommerce_'.$this->id.'_x402_sync');
         $saveName = esc_attr('woocommerce_'.$this->id.'_x402_settings_save');
         $checkboxName = esc_attr('woocommerce_'.$this->id.'_x402_ai_enabled');
+        $presentName = esc_attr('woocommerce_'.$this->id.'_x402_ai_enabled_present');
+        $lastSyncMessage = (string) get_option(self::X402_LAST_SYNC_MESSAGE_OPTION, '');
+        $lastSyncError = (string) get_option(self::X402_LAST_SYNC_ERROR_OPTION, '');
+        $lastResultHtml = '';
+        if ($lastSyncError !== '') {
+            $lastResultHtml = '<div class="notice notice-error inline" style="margin:12px 0 0;"><p>'.esc_html($lastSyncError).'</p></div>';
+        } elseif ($lastSyncMessage !== '') {
+            $lastResultHtml = '<div class="notice notice-success inline" style="margin:12px 0 0;"><p>'.esc_html($lastSyncMessage).'</p></div>';
+        }
         $rows = '';
         try {
             foreach ((new ProductSync())->listProductSettings() as $product) {
@@ -285,7 +304,9 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<td class="forminp">'
             .'<p>WooCommerceの商品マスタをunipleの商品catalogへ同期します。公開中・購入可能・在庫ありの商品は「有効」として同期されます。</p>'
             .'<p class="description">通常のHosted Checkout / LINE / WalletConnect決済フローは変更されません。</p>'
+            .'<input type="hidden" name="'.$presentName.'" value="1" />'
             .'<button type="submit" class="button" name="'.$buttonName.'" value="1">x402商品同期</button>'
+            .$lastResultHtml
             .'<p style="margin:12px 0 0;">'
             .'<button type="button" class="button" onclick="unipleX402SetAiTarget(\'all\')">全て選択</button> '
             .'<button type="button" class="button" onclick="unipleX402SetAiTarget(\'none\')">全て解除</button> '
@@ -412,12 +433,15 @@ final class UnipleGateway extends WC_Payment_Gateway
             $client = new UnipleClient($this->clientConfig());
             $result = (new ProductSync())->syncAll($client);
             $message = sprintf(
-                'x402商品同期を実行しました。同期: %d件 / 有効: %d件 / 無効: %d件 / 同期対象外: %d件',
+                'x402商品同期を実行しました。同期: %d件 / 有効: %d件 / 無効: %d件 / 同期対象外: %d件 (%s)',
                 $result['synced'],
                 $result['active'],
                 $result['inactive'],
-                $result['skipped']
+                $result['skipped'],
+                current_time('mysql')
             );
+            update_option(self::X402_LAST_SYNC_MESSAGE_OPTION, $message, false);
+            delete_option(self::X402_LAST_SYNC_ERROR_OPTION);
             if (class_exists('\WC_Admin_Settings')) {
                 \WC_Admin_Settings::add_message($message);
             } else {
@@ -428,7 +452,8 @@ final class UnipleGateway extends WC_Payment_Gateway
                 '[uniple-checkout] x402 product sync failed: '.$e->getMessage(),
                 ['source' => 'uniple-checkout']
             );
-            $message = 'x402商品同期に失敗しました: '.$e->getMessage();
+            $message = 'x402商品同期に失敗しました: '.$e->getMessage().' ('.current_time('mysql').')';
+            update_option(self::X402_LAST_SYNC_ERROR_OPTION, $message, false);
             if (class_exists('\WC_Admin_Settings')) {
                 \WC_Admin_Settings::add_error($message);
             } else {

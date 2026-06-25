@@ -4,7 +4,7 @@ Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.1.6
+Stable tag: 0.1.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,11 @@ No screenshots are included in this release.
 
 == Changelog ==
 
+= 0.1.7 =
+
+* Fixed AI purchase target checkbox saving from the normal WooCommerce settings save action.
+* Added latest x402 product sync result display below the sync button.
+
 = 0.1.6 =
 
 * Added bulk controls for x402 AI purchase target checkboxes.
@@ -136,6 +141,10 @@ No screenshots are included in this release.
 * Added masked admin fields for API key and webhook secret.
 
 == Upgrade Notice ==
+
+= 0.1.7 =
+
+Fixes AI purchase target saving and shows the latest x402 sync result near the sync button.
 
 = 0.1.6 =
 
