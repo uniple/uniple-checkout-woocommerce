@@ -201,11 +201,9 @@ final class UnipleGateway extends WC_Payment_Gateway
             return false;
         }
 
-        $syncKey = 'woocommerce_'.$this->id.'_x402_sync';
-        $settingsKey = 'woocommerce_'.$this->id.'_x402_settings_save';
         $enabledKey = 'woocommerce_'.$this->id.'_x402_ai_enabled';
         $presentKey = 'woocommerce_'.$this->id.'_x402_ai_enabled_present';
-        $settingsRequested = isset($_POST[$settingsKey]) || isset($_POST[$presentKey]);
+        $settingsRequested = isset($_POST[$presentKey]);
         $shouldSync = false;
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
         if ($settingsRequested) {
@@ -219,11 +217,6 @@ final class UnipleGateway extends WC_Payment_Gateway
             }
             $shouldSync = true;
         }
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
-        if (isset($_POST[$syncKey])) {
-            $shouldSync = true;
-        }
-
         if ($shouldSync) {
             $this->runX402ProductSync();
         }
@@ -269,8 +262,6 @@ final class UnipleGateway extends WC_Payment_Gateway
      */
     public function generate_x402_sync_html($key, $data): string
     {
-        $buttonName = esc_attr('woocommerce_'.$this->id.'_x402_sync');
-        $saveName = esc_attr('woocommerce_'.$this->id.'_x402_settings_save');
         $checkboxName = esc_attr('woocommerce_'.$this->id.'_x402_ai_enabled');
         $presentName = esc_attr('woocommerce_'.$this->id.'_x402_ai_enabled_present');
         $lastSyncMessage = (string) get_option(self::X402_LAST_SYNC_MESSAGE_OPTION, '');
@@ -305,7 +296,7 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<p>WooCommerceの商品マスタをunipleの商品catalogへ同期します。公開中・購入可能・在庫ありの商品は「有効」として同期されます。</p>'
             .'<p class="description">通常のHosted Checkout / LINE / WalletConnect決済フローは変更されません。</p>'
             .'<input type="hidden" name="'.$presentName.'" value="1" />'
-            .'<button type="submit" class="button uniple-x402-submit" name="'.$buttonName.'" value="1">x402商品同期</button>'
+            .'<button type="submit" class="button uniple-x402-submit" name="save" value="x402商品同期">x402商品同期</button>'
             .$lastResultHtml
             .'<p style="margin:12px 0 0;">'
             .'<button type="button" class="button" onclick="unipleX402SetAiTarget(\'all\')">全て選択</button> '
@@ -315,7 +306,7 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<table class="widefat striped" style="margin-top:12px; max-width:960px;">'
             .'<thead><tr><th>AI購入対象</th><th>商品/バリエーション</th><th>価格</th><th>EC状態</th></tr></thead>'
             .'<tbody>'.$rows.'</tbody></table>'
-            .'<p><button type="submit" class="button uniple-x402-submit" name="'.$saveName.'" value="1">AI購入対象設定を保存</button></p>'
+            .'<p><button type="submit" class="button uniple-x402-submit" name="save" value="AI購入対象設定を保存">AI購入対象設定を保存</button></p>'
             .'<script>'
             .'function unipleX402AllowSubmit(){window.onbeforeunload=null;}'
             .'function unipleX402SetAiTarget(mode){'

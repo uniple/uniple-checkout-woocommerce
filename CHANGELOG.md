@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-06-25
+
+### Fixed
+
+- Route the x402 sync and AI target save buttons through WooCommerce's standard settings save action so they actually persist changes.
+
 ## [0.1.8] - 2026-06-25
 
 ### Fixed

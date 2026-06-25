@@ -4,7 +4,7 @@ Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.1.8
+Stable tag: 0.1.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ No screenshots are included in this release.
 
 == Changelog ==
 
+= 0.1.9 =
+
+* Fixed x402 sync and AI target save buttons so they use WooCommerce's standard settings save action.
+
 = 0.1.8 =
 
 * Fixed browser unsaved-changes prompt when saving x402 AI target settings.
@@ -145,6 +149,10 @@ No screenshots are included in this release.
 * Added masked admin fields for API key and webhook secret.
 
 == Upgrade Notice ==
+
+= 0.1.9 =
+
+Fixes the dedicated x402 buttons so they persist settings directly.
 
 = 0.1.8 =
 
