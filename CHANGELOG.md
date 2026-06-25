@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-06-25
+
+### Added
+
+- Per-product and per-variation AI purchase target settings for x402 product sync.
+- Replace-scope x402 product sync to deactivate stale Product rows in uniple.
+
 ## [0.1.4] - 2026-06-25
 
 ### Added

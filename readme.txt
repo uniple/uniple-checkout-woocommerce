@@ -4,7 +4,7 @@ Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.1.4
+Stable tag: 0.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,7 @@ Features:
 * Atomic webhook idempotency lock and event history.
 * Return URL order key verification and live lookup fallback.
 * Masked API key and webhook secret fields in the WooCommerce admin.
+* x402 / AI purchase product sync with per-product AI purchase target settings.
 
 This plugin is built for WooCommerce stores. It is not developed by, affiliated with, or endorsed by WooCommerce or Automattic.
 
@@ -97,6 +98,11 @@ No screenshots are included in this release.
 
 == Changelog ==
 
+= 0.1.5 =
+
+* Added per-product / per-variation AI purchase target settings for x402 sync.
+* Added replace-scope product sync to deactivate stale x402 product rows.
+
 = 0.1.4 =
 
 * Added x402 shipping quote endpoint for AI purchase flows.
@@ -126,6 +132,10 @@ No screenshots are included in this release.
 * Added masked admin fields for API key and webhook secret.
 
 == Upgrade Notice ==
+
+= 0.1.5 =
+
+Adds AI purchase target controls and stale x402 product deactivation.
 
 = 0.1.4 =
 

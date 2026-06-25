@@ -169,7 +169,7 @@ final class UnipleClient
      *
      * @return array<string,mixed>
      */
-    public function syncProducts(array $products): array
+    public function syncProducts(array $products, bool $replace = false, string $scope = ''): array
     {
         if (count($products) > 200) {
             throw new InvalidArgumentException('products max 200');
@@ -182,7 +182,14 @@ final class UnipleClient
             'method' => 'PUT',
             'headers' => $this->commonHeaders(['Content-Type' => 'application/json']),
             'body' => (string) wp_json_encode(
-                ['products' => array_values($products)],
+                array_filter(
+                    [
+                        'products' => array_values($products),
+                        'replace' => $replace ? true : null,
+                        'scope' => $replace ? ($scope !== '' ? $scope : 'site') : null,
+                    ],
+                    static fn ($value): bool => $value !== null
+                ),
                 JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
             ),
             'timeout' => self::TIMEOUT_SECONDS,

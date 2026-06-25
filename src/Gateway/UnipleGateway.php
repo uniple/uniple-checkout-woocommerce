@@ -199,6 +199,20 @@ final class UnipleGateway extends WC_Payment_Gateway
         }
 
         $syncKey = 'woocommerce_'.$this->id.'_x402_sync';
+        $settingsKey = 'woocommerce_'.$this->id.'_x402_settings_save';
+        $enabledKey = 'woocommerce_'.$this->id.'_x402_ai_enabled';
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
+        if (isset($_POST[$settingsKey])) {
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
+            $enabled = isset($_POST[$enabledKey]) && is_array($_POST[$enabledKey])
+                ? array_map('sanitize_text_field', wp_unslash($_POST[$enabledKey]))
+                : [];
+            $saved = (new ProductSync())->saveAiTargets($enabled);
+            if (class_exists('\WC_Admin_Settings')) {
+                \WC_Admin_Settings::add_message(sprintf('AI購入対象設定を保存しました。対象商品: %d件', $saved));
+            }
+            $this->runX402ProductSync();
+        }
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
         if (isset($_POST[$syncKey])) {
             $this->runX402ProductSync();
@@ -246,6 +260,24 @@ final class UnipleGateway extends WC_Payment_Gateway
     public function generate_x402_sync_html($key, $data): string
     {
         $buttonName = esc_attr('woocommerce_'.$this->id.'_x402_sync');
+        $saveName = esc_attr('woocommerce_'.$this->id.'_x402_settings_save');
+        $checkboxName = esc_attr('woocommerce_'.$this->id.'_x402_ai_enabled');
+        $rows = '';
+        try {
+            foreach ((new ProductSync())->listProductSettings() as $product) {
+                $checked = !empty($product['aiEnabled']) ? ' checked="checked"' : '';
+                $price = $product['priceJpyc'] !== '' ? esc_html($product['priceJpyc'].' JPYC') : '同期対象外';
+                $status = !empty($product['ecActive']) ? '有効' : '無効';
+                $rows .= '<tr>'
+                    .'<td><input type="checkbox" name="'.$checkboxName.'[]" value="'.esc_attr($product['externalId']).'"'.$checked.' /></td>'
+                    .'<td>'.esc_html($product['name']).'<br><code>'.esc_html($product['externalId']).'</code></td>'
+                    .'<td>'.$price.'</td>'
+                    .'<td>'.esc_html($status).'</td>'
+                    .'</tr>';
+            }
+        } catch (\Throwable $e) {
+            $rows = '<tr><td colspan="4">商品一覧を取得できませんでした。</td></tr>';
+        }
 
         return '<tr valign="top">'
             .'<th scope="row" class="titledesc">'.esc_html((string) ($data['title'] ?? 'x402 / AI購入 商品同期')).'</th>'
@@ -253,6 +285,10 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<p>WooCommerceの商品マスタをunipleの商品catalogへ同期します。公開中・購入可能・在庫ありの商品は「有効」として同期されます。</p>'
             .'<p class="description">通常のHosted Checkout / LINE / WalletConnect決済フローは変更されません。</p>'
             .'<button type="submit" class="button" name="'.$buttonName.'" value="1">x402商品同期</button>'
+            .'<table class="widefat striped" style="margin-top:12px; max-width:960px;">'
+            .'<thead><tr><th>AI購入対象</th><th>商品/バリエーション</th><th>価格</th><th>EC状態</th></tr></thead>'
+            .'<tbody>'.$rows.'</tbody></table>'
+            .'<p><button type="submit" class="button" name="'.$saveName.'" value="1">AI購入対象設定を保存</button></p>'
             .'</td></tr>';
     }
 
