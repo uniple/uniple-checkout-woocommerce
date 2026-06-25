@@ -13,7 +13,7 @@ final class UserAgentTest extends TestCase
     {
         $ua = UserAgent::build();
         self::assertMatchesRegularExpression(
-            '#^uniple-plugin-woocommerce/0\.1\.3 \(WP/[^;]+; WC/[^)]+\)$#',
+            '#^uniple-plugin-woocommerce/0\.1\.4 \(WP/[^;]+; WC/[^)]+\)$#',
             $ua
         );
     }

@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-06-25
+
+### Added
+
+- x402 shipping quote endpoint for AI purchase flows.
+- x402 quote validation for webhook-created paid orders, while preserving legacy quote-less x402 webhook handling.
+
 ## [0.1.3] - 2026-06-23
 
 ### Added
