@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-06-25
+
+### Fixed
+
+- Clear WooCommerce's unsaved-changes prompt when submitting the x402 AI target save or sync buttons.
+
 ## [0.1.7] - 2026-06-25
 
 ### Fixed

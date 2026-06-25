@@ -305,7 +305,7 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<p>WooCommerceの商品マスタをunipleの商品catalogへ同期します。公開中・購入可能・在庫ありの商品は「有効」として同期されます。</p>'
             .'<p class="description">通常のHosted Checkout / LINE / WalletConnect決済フローは変更されません。</p>'
             .'<input type="hidden" name="'.$presentName.'" value="1" />'
-            .'<button type="submit" class="button" name="'.$buttonName.'" value="1">x402商品同期</button>'
+            .'<button type="submit" class="button uniple-x402-submit" name="'.$buttonName.'" value="1">x402商品同期</button>'
             .$lastResultHtml
             .'<p style="margin:12px 0 0;">'
             .'<button type="button" class="button" onclick="unipleX402SetAiTarget(\'all\')">全て選択</button> '
@@ -315,8 +315,9 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<table class="widefat striped" style="margin-top:12px; max-width:960px;">'
             .'<thead><tr><th>AI購入対象</th><th>商品/バリエーション</th><th>価格</th><th>EC状態</th></tr></thead>'
             .'<tbody>'.$rows.'</tbody></table>'
-            .'<p><button type="submit" class="button" name="'.$saveName.'" value="1">AI購入対象設定を保存</button></p>'
+            .'<p><button type="submit" class="button uniple-x402-submit" name="'.$saveName.'" value="1">AI購入対象設定を保存</button></p>'
             .'<script>'
+            .'function unipleX402AllowSubmit(){window.onbeforeunload=null;}'
             .'function unipleX402SetAiTarget(mode){'
             .'document.querySelectorAll(".uniple-x402-ai-target").forEach(function(checkbox){'
             .'if(mode==="all"){checkbox.checked=true;}'
@@ -324,6 +325,11 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'else if(mode==="ec_active"){checkbox.checked=checkbox.getAttribute("data-ec-active")==="1";}'
             .'});'
             .'}'
+            .'document.querySelectorAll(".uniple-x402-submit").forEach(function(button){'
+            .'button.addEventListener("click", unipleX402AllowSubmit);'
+            .'});'
+            .'var unipleX402Form=document.getElementById("mainform");'
+            .'if(unipleX402Form){unipleX402Form.addEventListener("submit", unipleX402AllowSubmit, true);}'
             .'</script>'
             .'</td></tr>';
     }
