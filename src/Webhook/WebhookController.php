@@ -24,6 +24,7 @@ namespace Uniple\CheckoutWooCommerce\Webhook;
 use Uniple\CheckoutWooCommerce\Api\UnipleClient;
 use Uniple\CheckoutWooCommerce\Gateway\UnipleGateway;
 use Uniple\CheckoutWooCommerce\Plugin;
+use Uniple\CheckoutWooCommerce\Util\JapaneseAddress;
 use Uniple\CheckoutWooCommerce\X402\ProductResolver;
 use Uniple\CheckoutWooCommerce\X402\QuoteStore;
 use WP_REST_Request;
@@ -500,16 +501,17 @@ final class WebhookController
         $phone = self::readPayloadString($shipping, ['phoneNumber', 'phone_number', 'phone', 'tel', 'telephone']);
         $postcode = self::readPayloadString($shipping, ['postalCode', 'postal_code', 'postCode', 'post_code', 'zipCode', 'zip_code', 'zipcode', 'zip']);
         $state = self::normalizePrefName(self::readPayloadString($shipping, ['state', 'pref', 'prefName', 'pref_name', 'prefecture', 'province', 'region']));
+        $address = JapaneseAddress::normalize($state, $city, $address1, $address2);
 
         return [
             'first_name' => mb_substr($firstName, 0, 255),
             'last_name' => mb_substr($lastName, 0, 255),
             'email' => mb_substr(self::readPayloadString($shipping, ['email', 'mail']) ?: 'x402-agent@uniple.local', 0, 255),
             'phone' => mb_substr($phone !== '' ? $phone : '0000000000', 0, 32),
-            'address_1' => mb_substr(trim($city.' '.$address1) ?: 'x402', 0, 255),
-            'address_2' => mb_substr($address2 !== '' ? $address2 : 'AI purchase', 0, 255),
+            'address_1' => mb_substr($address['address1'] !== '' ? $address['address1'] : 'x402', 0, 255),
+            'address_2' => mb_substr($address['address2'], 0, 255),
             'postcode' => mb_substr($postcode !== '' ? $postcode : '0000000', 0, 32),
-            'city' => mb_substr($city !== '' ? $city : 'x402', 0, 255),
+            'city' => mb_substr($address['city'] !== '' ? $address['city'] : 'x402', 0, 255),
             'state' => mb_substr($state !== '' ? $state : '東京都', 0, 255),
             'country' => 'JP',
         ];

@@ -17,6 +17,7 @@ defined('ABSPATH') || define('ABSPATH', __DIR__.'/wp/');
 
 require_once __DIR__.'/stubs/wp-stubs.php';
 require_once __DIR__.'/../src/Plugin.php';
+require_once __DIR__.'/../src/Util/JapaneseAddress.php';
 require_once __DIR__.'/../src/Api/UserAgent.php';
 require_once __DIR__.'/../src/Api/UnipleClient.php';
 require_once __DIR__.'/../src/Admin/SettingsSanitizer.php';

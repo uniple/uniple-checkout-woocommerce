@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Uniple\CheckoutWooCommerce\Webhook;
 
+use Uniple\CheckoutWooCommerce\Util\JapaneseAddress;
 use Uniple\CheckoutWooCommerce\X402\ProductResolver;
 use Uniple\CheckoutWooCommerce\X402\QuoteStore;
 use WC_Product;
@@ -305,8 +306,9 @@ final class QuoteController
         $postcode = self::readString($shipping, ['postalCode', 'postal_code', 'postCode', 'post_code', 'zipCode', 'zip_code', 'zipcode', 'zip']);
         $prefecture = self::normalizePrefName(self::readString($shipping, ['prefecture', 'pref', 'prefName', 'pref_name', 'state', 'province', 'region']));
         $state = self::stateCode($prefecture);
+        $address = JapaneseAddress::normalize($prefecture, $city, $address1, $address2);
 
-        if ($firstName === '' || $lastName === '' || $address1 === '' || $phone === '' || $postcode === '' || $state === '') {
+        if ($firstName === '' || $lastName === '' || $address['address1'] === '' || $phone === '' || $postcode === '' || $state === '') {
             throw new \InvalidArgumentException('shipping_required_field_missing');
         }
 
@@ -319,9 +321,9 @@ final class QuoteController
             'postalCode' => mb_substr($postcode, 0, 32),
             'prefecture' => $prefecture,
             'state' => $state,
-            'city' => mb_substr($city, 0, 255),
-            'address1' => mb_substr(trim($city.' '.$address1), 0, 255),
-            'address2' => mb_substr($address2, 0, 255),
+            'city' => mb_substr($address['city'], 0, 255),
+            'address1' => mb_substr($address['address1'], 0, 255),
+            'address2' => mb_substr($address['address2'], 0, 255),
             'country' => 'JP',
         ];
     }
