@@ -4,7 +4,7 @@ Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.1.9
+Stable tag: 0.1.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ No screenshots are included in this release.
 
 == Changelog ==
 
+= 0.1.10 =
+
+* Fixed Japanese shipping address normalization for x402 quote and order creation flows.
+
 = 0.1.9 =
 
 * Fixed x402 sync and AI target save buttons so they use WooCommerce's standard settings save action.
@@ -149,6 +153,10 @@ No screenshots are included in this release.
 * Added masked admin fields for API key and webhook secret.
 
 == Upgrade Notice ==
+
+= 0.1.10 =
+
+Keeps x402 AI purchase address handling aligned with Japanese WooCommerce shipping fields.
 
 = 0.1.9 =
 

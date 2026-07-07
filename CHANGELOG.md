@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-07-07
+
+### Fixed
+
+- Normalize Japanese shipping address fields for x402 quote and order creation flows.
+
 ## [0.1.9] - 2026-06-25
 
 ### Fixed
