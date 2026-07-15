@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-07-15
+
+### Added
+
+- Redeem shipping-inclusive x402 quotes exactly once when creating paid WooCommerce orders.
+- Return WooCommerce's standard order-received URL after the paid order is durably acknowledged.
+
 ## [0.1.10] - 2026-07-07
 
 ### Fixed

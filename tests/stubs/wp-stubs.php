@@ -81,3 +81,50 @@ if (!function_exists('wp_verify_nonce')) {
         return $nonce === 'valid-'.$action;
     }
 }
+
+if (!function_exists('add_option')) {
+    function add_option(string $name, mixed $value, string $deprecated = '', bool $autoload = true): bool
+    {
+        $options = &$GLOBALS['uniple_test_options'];
+        if (!is_array($options)) {
+            $options = [];
+        }
+        if (array_key_exists($name, $options)) {
+            return false;
+        }
+        $options[$name] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('get_option')) {
+    function get_option(string $name, mixed $default = false): mixed
+    {
+        $options = $GLOBALS['uniple_test_options'] ?? [];
+
+        return is_array($options) && array_key_exists($name, $options) ? $options[$name] : $default;
+    }
+}
+
+if (!function_exists('update_option')) {
+    function update_option(string $name, mixed $value, bool $autoload = true): bool
+    {
+        $GLOBALS['uniple_test_options'][$name] = $value;
+
+        return true;
+    }
+}
+
+if (!function_exists('delete_option')) {
+    function delete_option(string $name): bool
+    {
+        $options = &$GLOBALS['uniple_test_options'];
+        if (!is_array($options) || !array_key_exists($name, $options)) {
+            return false;
+        }
+        unset($options[$name]);
+
+        return true;
+    }
+}

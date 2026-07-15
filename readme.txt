@@ -4,7 +4,7 @@ Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.1.10
+Stable tag: 0.1.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ No screenshots are included in this release.
 
 == Changelog ==
 
+= 0.1.11 =
+
+* Redeems shipping-inclusive x402 quotes exactly once and returns the standard WooCommerce order-received URL after order creation.
+
 = 0.1.10 =
 
 * Fixed Japanese shipping address normalization for x402 quote and order creation flows.
@@ -153,6 +157,10 @@ No screenshots are included in this release.
 * Added masked admin fields for API key and webhook secret.
 
 == Upgrade Notice ==
+
+= 0.1.11 =
+
+Adds durable paid-quote redemption and restores the normal WooCommerce purchase-complete destination.
 
 = 0.1.10 =
 
