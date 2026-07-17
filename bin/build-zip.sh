@@ -14,6 +14,7 @@
 # 出力: <output_dir>/uniple-checkout-for-woocommerce-<version>.zip
 #       (= readme.txt の "Stable tag:" から version 取得)
 set -euo pipefail
+umask 022
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${PLUGIN_DIR}"
@@ -41,6 +42,12 @@ if [[ -z "${VERSION}" ]]; then
     exit 1
 fi
 
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git show -s --format=%ct HEAD)}"
+if [[ ! "${SOURCE_DATE_EPOCH}" =~ ^[0-9]+$ ]] || (( SOURCE_DATE_EPOCH < 315532800 )); then
+    echo "error: SOURCE_DATE_EPOCH must be a Unix timestamp on or after 1980-01-01" >&2
+    exit 1
+fi
+
 OUTPUT_DIR="${1:-${PLUGIN_DIR}/build}"
 mkdir -p "${OUTPUT_DIR}"
 
@@ -61,13 +68,17 @@ git ls-files | while IFS= read -r f; do
     cp -p "$f" "${dest}"
 done
 
+# Normalize file and directory mtimes so repeated builds of the same commit
+# produce the same archive rather than inheriting mktemp directory timestamps.
+find "${STAGE_PLUGIN_DIR}" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
+
 OUTPUT_ZIP="${OUTPUT_DIR}/${SLUG}-${VERSION}.zip"
 rm -f "${OUTPUT_ZIP}"
 
 if command -v zip >/dev/null 2>&1; then
     (
         cd "${STAGE_DIR}"
-        COPYFILE_DISABLE=1 zip -rq "${OUTPUT_ZIP}" "${SLUG}" \
+        COPYFILE_DISABLE=1 zip -Xrq "${OUTPUT_ZIP}" "${SLUG}" \
             -x "*.DS_Store" "*/._*"
     )
 else
@@ -75,6 +86,7 @@ else
         $stage = $argv[1];
         $slug = $argv[2];
         $out = $argv[3];
+        $epoch = (int) $argv[4];
         $zip = new ZipArchive();
         if ($zip->open($out, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             fwrite(STDERR, "failed to create zip\n");
@@ -85,20 +97,33 @@ else
             new RecursiveDirectoryIterator($base.$slug, RecursiveDirectoryIterator::SKIP_DOTS),
             RecursiveIteratorIterator::SELF_FIRST
         );
+        $entries = [];
         foreach ($iter as $f) {
             $real = $f->getRealPath();
             $rel = substr($real, strlen($base));
             if (preg_match("#(^|/)(\.DS_Store|\._[^/]+)$#", $rel)) {
                 continue;
             }
+            $entries[$rel] = $real;
+        }
+        ksort($entries, SORT_STRING);
+        foreach ($entries as $rel => $real) {
+            $f = new SplFileInfo($real);
             if ($f->isDir()) {
-                $zip->addEmptyDir($rel);
+                $entryName = rtrim($rel, "/")."/";
+                $zip->addEmptyDir($entryName);
             } else {
-                $zip->addFile($real, $rel);
+                $entryName = $rel;
+                $zip->addFile($real, $entryName);
+            }
+            if (!$zip->setMtimeName($entryName, $epoch)) {
+                fwrite(STDERR, "failed to normalize zip entry timestamp: ".$entryName."\n");
+                $zip->close();
+                exit(1);
             }
         }
         $zip->close();
-    ' "${STAGE_DIR}" "${SLUG}" "${OUTPUT_ZIP}"
+    ' "${STAGE_DIR}" "${SLUG}" "${OUTPUT_ZIP}" "${SOURCE_DATE_EPOCH}"
 fi
 
 echo "built: ${OUTPUT_ZIP}"
