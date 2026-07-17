@@ -4,7 +4,7 @@ Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.1.11
+Stable tag: 0.1.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,6 +26,7 @@ Features:
 * Return URL order key verification and live lookup fallback.
 * Masked API key and webhook secret fields in the WooCommerce admin.
 * x402 / AI purchase product sync with per-product AI purchase target settings.
+* Signed, read-only catalog endpoint with five-minute central synchronization.
 
 This plugin is built for WooCommerce stores. It is not developed by, affiliated with, or endorsed by WooCommerce or Automattic.
 
@@ -72,16 +73,26 @@ No. The checkout redirect opens the uniple hosted checkout page after the shoppe
 
 The API base URL setting accepts `https://uniple.io` and `https://dev.uniple.io`. Use the live endpoint for production stores.
 
+= Does automatic catalog synchronization require pretty permalinks? =
+
+Yes. Automatic pull registration requires an HTTPS REST URL without a query string, such as `/wp-json/uniple/v1/catalog`. If WordPress exposes REST routes only through `?rest_route=`, the normal hosted checkout and manual product push still work, but automatic catalog pull is not registered.
+
 == External services ==
 
 This plugin connects to the uniple hosted checkout API. The default service endpoint is `https://uniple.io`; the settings screen also permits `https://dev.uniple.io` for test use.
 
-The plugin sends data to uniple only when it needs to create or verify a checkout session:
+The plugin exchanges data with uniple for checkout processing and
+merchant-triggered product catalog synchronization:
 
 * When a shopper places an order with the uniple payment method, the plugin sends `POST /api/merchant/checkout/sessions` to the configured uniple API base URL.
 * The session creation request includes the order total as `amountJpyc`, the WooCommerce order ID as `clientReferenceId`, the order description / order number, the configured merchant label, a one-line item summary, the success URL, the cancel URL, and the webhook URL.
 * The session creation request also includes the merchant API key in the `Authorization` header and a plugin `User-Agent` containing the plugin version, WordPress version, and WooCommerce version.
 * When the shopper returns from hosted checkout before the webhook has completed the order, the plugin may send `GET /api/merchant/checkout/sessions/{sessionId}` to verify the session status. This request includes the uniple session ID, the merchant API key, and the same plugin `User-Agent`.
+* When a merchant runs x402 product sync, manually or through a server-side schedule, the plugin sends `PUT /api/merchant/products`. It sends product or variation IDs, names, descriptions, image and product-page URLs, JPYC prices, tax labels, ordering, and active flags. It does not send customer or order data in this request.
+* After a successful product push, the plugin sends `PUT /api/merchant/catalog-sync` to register the store's signed catalog URL, platform, plugin version, five-minute interval, and a purpose-derived pull secret. The raw API key is not used as the stored pull credential.
+* The settings screen may send `GET /api/merchant/catalog-sync` to show registration and last-run status. An authenticated rollback may send `DELETE /api/merchant/catalog-sync`.
+* The product and catalog API requests include the merchant API key in the `Authorization` header and the same plugin `User-Agent` described above.
+* Once registered, uniple periodically sends a signed `GET` request to `/wp-json/uniple/v1/catalog`. The plugin verifies the request locally and returns the same product fields as a complete catalog snapshot. Unsigned requests are rejected, and customer/order data is not returned.
 * uniple sends payment webhooks back to the store at `/wp-json/uniple/v1/webhook`. The plugin verifies the webhook signature locally with the configured webhook secret.
 
 The plugin does not send full billing addresses, shipping addresses, customer account details, card details, wallet private keys, or browser cookies to uniple.
@@ -97,6 +108,12 @@ Service documentation and legal terms:
 No screenshots are included in this release.
 
 == Changelog ==
+
+= 0.1.12 =
+
+* Added a signed, read-only WooCommerce catalog endpoint and five-minute central auto-sync registration.
+* Product pushes and pulls now share one deterministic complete snapshot and fail closed instead of partially replacing catalogs over 200 rows.
+* Added registration status to WooCommerce settings and scheduled CLI results.
 
 = 0.1.11 =
 
@@ -157,6 +174,10 @@ No screenshots are included in this release.
 * Added masked admin fields for API key and webhook secret.
 
 == Upgrade Notice ==
+
+= 0.1.12 =
+
+Adds signed automatic product catalog synchronization while leaving hosted checkout, orders, and webhooks unchanged.
 
 = 0.1.11 =
 

@@ -23,6 +23,7 @@ namespace Uniple\CheckoutWooCommerce;
 
 use Uniple\CheckoutWooCommerce\Gateway\UnipleBlockSupport;
 use Uniple\CheckoutWooCommerce\Gateway\UnipleGateway;
+use Uniple\CheckoutWooCommerce\Rest\CatalogController;
 use Uniple\CheckoutWooCommerce\ReturnUrl\ReturnController;
 use Uniple\CheckoutWooCommerce\Webhook\QuoteController;
 use Uniple\CheckoutWooCommerce\Webhook\WebhookController;
@@ -31,7 +32,7 @@ defined('ABSPATH') || exit;
 
 final class Plugin
 {
-    public const VERSION = '0.1.11';
+    public const VERSION = '0.1.12';
     public const PLUGIN_ID = 'uniple';
 
     public static function boot(): void
@@ -47,6 +48,7 @@ final class Plugin
         );
         add_action('rest_api_init', [WebhookController::class, 'registerRoutes']);
         add_action('rest_api_init', [QuoteController::class, 'registerRoutes']);
+        add_action('rest_api_init', [CatalogController::class, 'registerRoutes']);
         add_action('woocommerce_api_uniple_return', [ReturnController::class, 'handle']);
 
         // Cross-device thank-you support (= cf. ReturnController::handle())。

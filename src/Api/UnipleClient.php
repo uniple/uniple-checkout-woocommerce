@@ -23,6 +23,7 @@ namespace Uniple\CheckoutWooCommerce\Api;
 
 use InvalidArgumentException;
 use RuntimeException;
+use Uniple\CheckoutWooCommerce\Plugin;
 
 defined('ABSPATH') || exit;
 
@@ -38,6 +39,11 @@ final class UnipleClient
     public const DEFAULT_API_BASE_URL = 'https://uniple.io';
     public const ALLOWED_UNIPLE_HOSTS = ['uniple.io', 'dev.uniple.io'];
     public const TIMEOUT_SECONDS = 5;
+    public const CATALOG_VERSION = '1';
+    public const CATALOG_SYNC_INTERVAL_SECONDS = 300;
+    public const CATALOG_MAX_CLOCK_SKEW_SECONDS = 300;
+    public const CATALOG_PULL_CONTEXT = 'uniple-catalog-pull-v1';
+    public const CATALOG_SIGNATURE_PREAMBLE = 'UNIPLE-CATALOG-PULL-V1';
 
     /**
      * @param array{api_key:string, webhook_secret:string, merchant_label:string, api_base_url:string, mode:string} $config
@@ -213,6 +219,138 @@ final class UnipleClient
         return $payload;
     }
 
+    /**
+     * Merchant API keyからcatalog pull専用secretを用途分離して導出する。
+     *
+     * @return string 32-byte binary secret
+     */
+    public static function deriveCatalogPullSecret(string $apiKey): string
+    {
+        return hash_hmac('sha256', self::CATALOG_PULL_CONTEXT, $apiKey, true);
+    }
+
+    /**
+     * central workerとplugin endpointで共有するcatalog request署名を生成する。
+     */
+    public static function buildCatalogSignature(
+        string $timestamp,
+        string $nonce,
+        string $method,
+        string $path,
+        string $apiKey
+    ): string {
+        $canonical = implode("\n", [
+            self::CATALOG_SIGNATURE_PREAMBLE,
+            $timestamp,
+            $nonce,
+            strtoupper($method),
+            $path,
+        ]);
+
+        return 'sha256='.hash_hmac(
+            'sha256',
+            $canonical,
+            self::deriveCatalogPullSecret($apiKey)
+        );
+    }
+
+    /**
+     * timestamp付きHMAC catalog requestを検証する。
+     *
+     * $nowは決定論的なunit test用。通常のendpointでは省略する。
+     */
+    public function verifyCatalogRequestSignature(
+        string $version,
+        string $timestamp,
+        string $nonce,
+        string $signature,
+        string $method,
+        string $path,
+        ?int $now = null
+    ): bool {
+        $apiKey = (string) ($this->config['api_key'] ?? '');
+        $method = strtoupper($method);
+        $now = $now ?? time();
+
+        if (
+            $version !== self::CATALOG_VERSION
+            || $apiKey === ''
+            || $method !== 'GET'
+            || $path === ''
+            || $path[0] !== '/'
+            || str_contains($path, "\n")
+            || str_contains($path, "\r")
+            || preg_match('/^\d{10}$/', $timestamp) !== 1
+            || abs($now - (int) $timestamp) > self::CATALOG_MAX_CLOCK_SKEW_SECONDS
+            || preg_match('/^[a-f0-9]{32}$/', $nonce) !== 1
+            || preg_match('/^sha256=[a-f0-9]{64}$/', $signature) !== 1
+        ) {
+            return false;
+        }
+
+        $expected = self::buildCatalogSignature(
+            $timestamp,
+            $nonce,
+            $method,
+            $path,
+            $apiKey
+        );
+
+        return hash_equals($expected, $signature);
+    }
+
+    /**
+     * 署名付きread-only catalog endpointをcentral workerへ登録する。
+     *
+     * @return array<string,mixed>
+     */
+    public function registerCatalogSync(string $endpointUrl): array
+    {
+        $apiKey = $this->catalogApiKey();
+        $pullSecret = self::deriveCatalogPullSecret($apiKey);
+        $encodedSecret = rtrim(strtr(base64_encode($pullSecret), '+/', '-_'), '=');
+
+        return $this->catalogSyncRequest(
+            'PUT',
+            [
+                'endpointUrl' => $endpointUrl,
+                'pullSecret' => $encodedSecret,
+                'platform' => 'woocommerce',
+                'pluginVersion' => Plugin::VERSION,
+                'intervalSeconds' => self::CATALOG_SYNC_INTERVAL_SECONDS,
+            ],
+            'uniple_catalog_sync_registration_failed'
+        );
+    }
+
+    /**
+     * central worker側のcatalog sync状態を取得する。
+     *
+     * @return array<string,mixed>
+     */
+    public function getCatalogSyncStatus(): array
+    {
+        return $this->catalogSyncRequest(
+            'GET',
+            null,
+            'uniple_catalog_sync_status_failed'
+        );
+    }
+
+    /**
+     * この加盟店だけのcentral catalog pull登録を無効化する。
+     *
+     * @return array<string,mixed>
+     */
+    public function deleteCatalogSync(): array
+    {
+        return $this->catalogSyncRequest(
+            'DELETE',
+            null,
+            'uniple_catalog_sync_delete_failed'
+        );
+    }
+
     public function verifySignature(string $rawBody, string $sigHeader, ?string $secret = null): bool
     {
         $secret = $secret ?? $this->config['webhook_secret'];
@@ -327,6 +465,70 @@ final class UnipleClient
         }
 
         return in_array($host, self::ALLOWED_UNIPLE_HOSTS, true);
+    }
+
+    /**
+     * @param array<string,mixed>|null $body
+     *
+     * @return array<string,mixed>
+     */
+    private function catalogSyncRequest(string $method, ?array $body, string $errorCode): array
+    {
+        $this->catalogApiKey();
+        $args = [
+            'method' => $method,
+            'headers' => $this->commonHeaders(),
+            'timeout' => self::TIMEOUT_SECONDS,
+        ];
+
+        if ($body !== null) {
+            $jsonBody = wp_json_encode(
+                $body,
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            );
+            if (!is_string($jsonBody)) {
+                throw new RuntimeException($errorCode.': invalid_json');
+            }
+            $args['headers']['Content-Type'] = 'application/json';
+            $args['body'] = $jsonBody;
+        }
+
+        $response = wp_remote_request(
+            $this->endpoint('/api/merchant/catalog-sync'),
+            $args
+        );
+        if (is_wp_error($response)) {
+            throw new RuntimeException($errorCode.': transport_error');
+        }
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $raw = (string) wp_remote_retrieve_body($response);
+        if ($status < 200 || $status >= 300) {
+            throw new RuntimeException($errorCode.': status='.esc_html((string) $status));
+        }
+
+        try {
+            $payload = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new RuntimeException($errorCode.': invalid_json');
+        }
+        if (!is_array($payload) || !array_key_exists('ok', $payload) || $payload['ok'] !== true) {
+            throw new RuntimeException($errorCode.': invalid_payload');
+        }
+
+        $payload['httpStatus'] = $status;
+
+        return $payload;
+    }
+
+    private function catalogApiKey(): string
+    {
+        $apiKey = (string) ($this->config['api_key'] ?? '');
+        if (trim($apiKey) === '') {
+            throw new RuntimeException('uniple_api_key_not_configured');
+        }
+
+        return $apiKey;
     }
 
     /**

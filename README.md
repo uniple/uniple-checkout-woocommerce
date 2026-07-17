@@ -2,7 +2,7 @@
 
 JPYC stablecoin hosted checkout for WooCommerce, powered by [uniple](https://uniple.io/).
 
-> **Phase 1 release (0.1.2)** — WordPress.org / GitHub release preparation
+> **Release 0.1.12** — WordPress.org / GitHub release preparation
 > package for the WooCommerce uniple checkout plugin.
 
 ## Status
@@ -13,6 +13,7 @@ JPYC stablecoin hosted checkout for WooCommerce, powered by [uniple](https://uni
 - ✅ Signed webhook handler with atomic idempotency lock + event history
 - ✅ Return URL handler with order-key verification + option C live lookup
   fallback
+- ✅ Signed read-only product catalog endpoint + central auto-sync registration
 - ✅ Plugin-aware `User-Agent` telemetry hint
 - ✅ Japanese translation bundle (`languages/`)
 - ✅ GPLv2-or-later `LICENSE` bundled
@@ -25,6 +26,9 @@ JPYC stablecoin hosted checkout for WooCommerce, powered by [uniple](https://uni
 | WordPress | 6.4 |
 | WooCommerce | 8.5 |
 | PHP | 8.1 |
+
+Automatic catalog pull additionally requires an HTTPS pretty-permalink REST
+URL (`/wp-json/uniple/v1/catalog`) without a query string.
 
 ## Installation
 
@@ -68,6 +72,10 @@ uniple-hosted checkout. Plugin responsibilities:
 3. Receive return URL at `?wc-api=uniple_return` → verify `order_key` →
    reconcile via `GET /api/merchant/checkout/sessions/{id}` if the webhook has
    not yet landed → purge cart → redirect to thank-you page.
+4. Build one deterministic WooCommerce product snapshot for manual/scheduled
+   push and signed central pull; refuse partial snapshots over 200 rows.
+5. After a successful product push, register the signed catalog endpoint and
+   purpose-derived pull credential with uniple for five-minute synchronization.
 
 ## Security notes
 
@@ -78,6 +86,8 @@ uniple-hosted checkout. Plugin responsibilities:
   per-order session ID cross-check (`hash_equals`), per-event idempotency.
 - Return URL: order-key `hash_equals` verification before any state mutation.
 - Amounts: integer JPYC only — `50.5` is rejected before transmission.
+- Catalog pull: purpose-derived HMAC credential, exact request-path signing,
+  five-minute clock-skew limit, and fail-closed complete snapshots.
 
 ## Compatibility
 

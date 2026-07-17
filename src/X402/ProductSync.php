@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Uniple\CheckoutWooCommerce\X402;
 
 use RuntimeException;
+use Throwable;
 use Uniple\CheckoutWooCommerce\Api\UnipleClient;
 use WC_Product;
 use WC_Product_Variable;
@@ -26,9 +27,46 @@ final class ProductSync
     private const AI_ENABLED_META_KEY = '_uniple_x402_ai_enabled';
 
     /**
-     * @return array{synced:int,active:int,inactive:int,skipped:int,response:array<string,mixed>}
+     * @return array{synced:int,active:int,inactive:int,skipped:int,response:array<string,mixed>,autoSync:array<string,mixed>}
      */
     public function syncAll(UnipleClient $client): array
+    {
+        $catalog = $this->buildCatalog();
+        if ($catalog['truncated'] > 0) {
+            throw new RuntimeException('catalog_too_large_max_200');
+        }
+
+        $response = $client->syncProducts($catalog['products'], true, 'site');
+        try {
+            $autoSync = $client->registerCatalogSync($this->catalogEndpointUrl());
+        } catch (Throwable $e) {
+            $autoSync = [
+                'ok' => false,
+                'error' => 'uniple_catalog_sync_registration_failed',
+            ];
+        }
+
+        return [
+            'synced' => count($catalog['products']),
+            'active' => $catalog['active'],
+            'inactive' => $catalog['inactive'],
+            'skipped' => $catalog['skipped'],
+            'response' => $response,
+            'autoSync' => $autoSync,
+        ];
+    }
+
+    /**
+     * @return array{
+     *   products:array<int,array<string,mixed>>,
+     *   active:int,
+     *   inactive:int,
+     *   skipped:int,
+     *   truncated:int,
+     *   revision:string
+     * }
+     */
+    public function buildCatalog(): array
     {
         if (!function_exists('wc_get_products')) {
             throw new RuntimeException('woocommerce_unavailable');
@@ -38,11 +76,10 @@ final class ProductSync
         $activeCount = 0;
         $inactiveCount = 0;
         $skippedCount = 0;
+        $truncatedCount = 0;
         $sortOrder = 0;
 
-        $ids = $this->productIds();
-
-        foreach ($ids as $id) {
+        foreach ($this->catalogProductIds() as $id) {
             $product = wc_get_product($id);
             if (!$product instanceof WC_Product) {
                 ++$skippedCount;
@@ -51,10 +88,6 @@ final class ProductSync
 
             if ($product instanceof WC_Product_Variable) {
                 foreach ($product->get_children() as $variationId) {
-                    if (count($products) >= self::MAX_PRODUCTS_PER_SYNC) {
-                        ++$skippedCount;
-                        continue;
-                    }
                     $variation = wc_get_product($variationId);
                     if (!$variation instanceof WC_Product_Variation) {
                         ++$skippedCount;
@@ -65,34 +98,96 @@ final class ProductSync
                         ++$skippedCount;
                         continue;
                     }
+                    if (count($products) >= self::MAX_PRODUCTS_PER_SYNC) {
+                        ++$skippedCount;
+                        ++$truncatedCount;
+                        continue;
+                    }
                     $products[] = $item;
                     $item['active'] ? ++$activeCount : ++$inactiveCount;
                 }
                 continue;
             }
 
-            if (count($products) >= self::MAX_PRODUCTS_PER_SYNC) {
-                ++$skippedCount;
-                continue;
-            }
             $item = $this->productPayload($product, null, $sortOrder++);
             if ($item === null) {
                 ++$skippedCount;
+                continue;
+            }
+            if (count($products) >= self::MAX_PRODUCTS_PER_SYNC) {
+                ++$skippedCount;
+                ++$truncatedCount;
                 continue;
             }
             $products[] = $item;
             $item['active'] ? ++$activeCount : ++$inactiveCount;
         }
 
-        $response = $client->syncProducts($products, true, 'site');
+        $encoded = wp_json_encode(
+            $products,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION
+        );
+        if (!is_string($encoded)) {
+            throw new RuntimeException('catalog_json_encode_failed');
+        }
 
         return [
-            'synced' => count($products),
+            'products' => $products,
             'active' => $activeCount,
             'inactive' => $inactiveCount,
             'skipped' => $skippedCount,
-            'response' => $response,
+            'truncated' => $truncatedCount,
+            'revision' => hash('sha256', $encoded),
         ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function getAutoSyncStatus(UnipleClient $client): array
+    {
+        try {
+            return $client->getCatalogSyncStatus();
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'error' => 'uniple_catalog_sync_status_failed',
+            ];
+        }
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function deleteAutoSync(UnipleClient $client): array
+    {
+        return $client->deleteCatalogSync();
+    }
+
+    public function catalogEndpointUrl(): string
+    {
+        if (!function_exists('rest_url')) {
+            throw new RuntimeException('catalog_public_site_url_missing');
+        }
+
+        $url = trim((string) rest_url('uniple/v1/catalog'));
+        $parts = wp_parse_url($url);
+        if (
+            $url === ''
+            || !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || trim((string) ($parts['host'] ?? '')) === ''
+            || (isset($parts['port']) && (int) $parts['port'] !== 443)
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || !str_starts_with((string) ($parts['path'] ?? ''), '/')
+        ) {
+            throw new RuntimeException('catalog_pretty_permalink_required');
+        }
+
+        return $url;
     }
 
     /**
@@ -204,6 +299,21 @@ final class ProductSync
             'type' => ['simple', 'variable'],
             'status' => ['publish', 'draft', 'pending', 'private'],
             'limit' => self::MAX_PRODUCTS_PER_SYNC,
+            'orderby' => 'ID',
+            'order' => 'ASC',
+            'return' => 'ids',
+        ]);
+    }
+
+    /**
+     * @return array<int,int>
+     */
+    private function catalogProductIds(): array
+    {
+        return wc_get_products([
+            'type' => ['simple', 'variable'],
+            'status' => ['publish', 'draft', 'pending', 'private'],
+            'limit' => -1,
             'orderby' => 'ID',
             'order' => 'ASC',
             'return' => 'ids',

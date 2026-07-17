@@ -6,6 +6,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-07-18
+
+### Added
+
+- Signed, read-only WooCommerce catalog endpoint for uniple's central worker.
+- Purpose-derived catalog pull credential registration, status, and rollback
+  methods.
+- Five-minute automatic catalog registration after a successful product push.
+- Read-only auto-sync status in the WooCommerce gateway settings.
+
+### Changed
+
+- Product pushes and signed pulls now use one deterministic complete snapshot.
+- Catalogs over 200 rows fail closed instead of partially replacing the
+  central snapshot.
+- Automatic pull registration now fails clearly when WordPress exposes only
+  the query-form REST URL instead of an HTTPS pretty-permalink endpoint.
+
 ## [0.1.11] - 2026-07-15
 
 ### Added
@@ -93,4 +111,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - GitHub Actions workflow for PHP syntax lint across PHP 8.1 / 8.2 / 8.3.
 
 [Unreleased]: https://uniple.io/
+[0.1.12]: https://uniple.io/
 [0.1.0]: https://uniple.io/

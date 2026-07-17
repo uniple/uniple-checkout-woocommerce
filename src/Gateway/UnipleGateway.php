@@ -272,6 +272,55 @@ final class UnipleGateway extends WC_Payment_Gateway
         } elseif ($lastSyncMessage !== '') {
             $lastResultHtml = '<div class="notice notice-success inline" style="margin:12px 0 0;"><p>'.esc_html($lastSyncMessage).'</p></div>';
         }
+        $autoSyncStatusHtml = '';
+        if ((string) $this->get_option('api_key', '') !== '') {
+            try {
+                $statusResult = (new ProductSync())->getAutoSyncStatus(
+                    new UnipleClient($this->clientConfig())
+                );
+                $status = is_array($statusResult['status'] ?? null)
+                    ? $statusResult['status']
+                    : [];
+                if (($statusResult['ok'] ?? false) === true && !empty($status['enabled'])) {
+                    $failureCount = (int) ($status['failureCount'] ?? 0);
+                    $lastError = trim((string) ($status['lastError'] ?? ''));
+                    $hasPullError = $failureCount > 0 || $lastError !== '';
+                    $details = [];
+                    if (!empty($status['lastSuccessAt'])) {
+                        $details[] = '最終成功: '.(string) $status['lastSuccessAt'];
+                    }
+                    if (!empty($status['nextSyncAt'])) {
+                        $details[] = '次回予定: '.(string) $status['nextSyncAt'];
+                    }
+                    if ($failureCount > 0) {
+                        $details[] = '連続失敗: '.$failureCount;
+                    }
+                    if ($lastError !== '') {
+                        $details[] = '直近エラー: '.$lastError;
+                    }
+                    $autoSyncStatusHtml = '<div class="notice '
+                        .($hasPullError ? 'notice-warning' : 'notice-success')
+                        .' inline" style="margin:12px 0 0;"><p>'
+                        .($hasPullError
+                            ? '5分ごとの自動同期: 登録済み（要確認）'
+                            : '5分ごとの自動同期: 登録済み')
+                        .($details !== [] ? '<br>'.esc_html(implode(' / ', $details)) : '')
+                        .'</p></div>';
+                } elseif (($statusResult['ok'] ?? false) === true) {
+                    $autoSyncStatusHtml = '<div class="notice notice-info inline" style="margin:12px 0 0;"><p>'
+                        .'5分ごとの自動同期: 未登録（商品同期の成功後に登録されます）'
+                        .'</p></div>';
+                } else {
+                    $autoSyncStatusHtml = '<div class="notice notice-warning inline" style="margin:12px 0 0;"><p>'
+                        .'5分ごとの自動同期状態を取得できませんでした。'
+                        .'</p></div>';
+                }
+            } catch (\Throwable $e) {
+                $autoSyncStatusHtml = '<div class="notice notice-warning inline" style="margin:12px 0 0;"><p>'
+                    .'5分ごとの自動同期状態を取得できませんでした。'
+                    .'</p></div>';
+            }
+        }
         $rows = '';
         try {
             foreach ((new ProductSync())->listProductSettings() as $product) {
@@ -298,6 +347,7 @@ final class UnipleGateway extends WC_Payment_Gateway
             .'<input type="hidden" name="'.$presentName.'" value="1" />'
             .'<button type="submit" class="button uniple-x402-submit" name="save" value="x402商品同期">x402商品同期</button>'
             .$lastResultHtml
+            .$autoSyncStatusHtml
             .'<p style="margin:12px 0 0;">'
             .'<button type="button" class="button" onclick="unipleX402SetAiTarget(\'all\')">全て選択</button> '
             .'<button type="button" class="button" onclick="unipleX402SetAiTarget(\'none\')">全て解除</button> '
@@ -437,12 +487,29 @@ final class UnipleGateway extends WC_Payment_Gateway
                 $result['skipped'],
                 current_time('mysql')
             );
+            $autoSyncEnabled = ($result['autoSync']['ok'] ?? false) === true
+                && !empty($result['autoSync']['status']['enabled']);
+            $message .= $autoSyncEnabled
+                ? ' / 5分自動同期: 登録済み'
+                : ' / 5分自動同期: 登録失敗';
             update_option(self::X402_LAST_SYNC_MESSAGE_OPTION, $message, false);
-            delete_option(self::X402_LAST_SYNC_ERROR_OPTION);
-            if (class_exists('\WC_Admin_Settings')) {
-                \WC_Admin_Settings::add_message($message);
+            if ($autoSyncEnabled) {
+                delete_option(self::X402_LAST_SYNC_ERROR_OPTION);
             } else {
-                wc_add_notice($message, 'success');
+                update_option(
+                    self::X402_LAST_SYNC_ERROR_OPTION,
+                    '商品同期は成功しましたが、5分自動同期の登録に失敗しました。',
+                    false
+                );
+            }
+            if (class_exists('\WC_Admin_Settings')) {
+                if ($autoSyncEnabled) {
+                    \WC_Admin_Settings::add_message($message);
+                } else {
+                    \WC_Admin_Settings::add_error($message);
+                }
+            } else {
+                wc_add_notice($message, $autoSyncEnabled ? 'success' : 'error');
             }
         } catch (\Throwable $e) {
             wc_get_logger()->error(

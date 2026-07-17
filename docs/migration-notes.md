@@ -48,6 +48,9 @@ EC-CUBE 4 (= Symfony 6.4 + Guzzle) / EC-CUBE 2 (= LC_Page + Smarty + curl) plugi
 ### 3.1 確定済 endpoint
 - `POST /api/merchant/checkout/sessions` (= r1 起点、 2026-05 以降稳定)
 - `GET /api/merchant/checkout/sessions/<id>` (= r42 / 2026-05-13 確定、 option C 用)
+- `PUT /api/merchant/products` (= x402商品snapshot push)
+- `GET|PUT|DELETE /api/merchant/catalog-sync`
+  (= 署名付きread-only catalogの登録・状態確認・解除)
 - webhook 配送 (= r37 / 2026-05-13 secret rotate procedure 確立)
 
 ### 3.2 telemetry (= UA parse)
@@ -92,7 +95,8 @@ EC-CUBE 4 (= Symfony 6.4 + Guzzle) / EC-CUBE 2 (= LC_Page + Smarty + curl) plugi
 ## 6. リリース履歴
 
 - 0.1.0 (2026-05-14): Initial preview release。 sandbox smoke 前。
-- (次): F step smoke 完走後、 docs / readme.txt / screenshots 整備、 0.2.0 候補
+- 0.1.12 (2026-07-18): purpose-derived HMAC署名付きcatalog endpoint、
+  5分自動pull登録、200件超partial snapshotのfail-closedを追加。DB migrationなし。
 
 ---
 

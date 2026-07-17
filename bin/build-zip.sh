@@ -20,6 +20,21 @@ cd "${PLUGIN_DIR}"
 
 SLUG="uniple-checkout-for-woocommerce"
 
+if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
+    echo "error: release build requires a clean tracked worktree" >&2
+    git status --short >&2
+    exit 1
+fi
+
+for required_runtime_file in \
+    bin/x402_product_sync.php \
+    src/Rest/CatalogController.php; do
+    if ! git ls-files --error-unmatch "${required_runtime_file}" >/dev/null 2>&1; then
+        echo "error: required runtime file is not tracked: ${required_runtime_file}" >&2
+        exit 1
+    fi
+done
+
 VERSION=$(grep -E '^Stable tag:' readme.txt | head -n1 | awk '{print $3}')
 if [[ -z "${VERSION}" ]]; then
     echo "error: failed to extract version from readme.txt 'Stable tag:'" >&2

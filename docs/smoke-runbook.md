@@ -1,8 +1,23 @@
-# Sandbox smoke runbook (= step 9 F step、 D user 操作向け)
+# WooCommerce 0.1.12 dev / release smoke runbook
 
-ステータス: **draft (= credentials 受領前の手順雛形、 scrshot / log は smoke 実走時追加)**
+ステータス: **0.1.12 catalog auto-pull dev gate。Production反映はdev確認後の別承認。**
 
 ---
+
+## 0A. 0.1.12 artifact gate
+
+1. release対象をcommitし、worktreeがcleanであることを確認する。
+2. 同一commitからzipを2回生成し、SHA-256が一致することを確認する。
+3. zipのrootが`uniple-checkout-for-woocommerce/`だけであることを確認する。
+4. 少なくとも次のruntime fileがzipに含まれることを確認する。
+   - `src/Rest/CatalogController.php`
+   - `src/X402/ProductSync.php`
+   - `src/Api/UnipleClient.php`
+   - `bin/x402_product_sync.php`
+5. `tests/`、`.git/`、内部docs、secret、symlink、absolute path、`..` pathが
+   zipに含まれないことを確認する。
+6. zip内runtimeとrelease commitの対応fileがbyte一致することを確認し、
+   commit、artifact名、size、SHA-256を記録する。
 
 ## 0. 事前準備 (= C0 + A + B step 完了済前提)
 
@@ -18,11 +33,11 @@
 
 ## 1. plugin install
 
-1. `bin/build-zip.sh build` で `build/uniple-checkout-for-woocommerce-0.1.0.zip` 生成
+1. `bin/build-zip.sh build` で `build/uniple-checkout-for-woocommerce-0.1.12.zip` 生成
 2. WP admin → Plugins → Add New → Upload Plugin → 上記 zip upload
 3. Activate
 4. 確認:
-   - Plugins 一覧で「uniple checkout for WooCommerce 0.1.0」 active
+   - Plugins 一覧で「uniple checkout for WooCommerce 0.1.12」 active
    - WooCommerce → Status → Logs に plugin error なし
    - HPOS 設定 (= WooCommerce → Settings → Advanced → Features) で High-performance order storage を ON にしても warning 出ないこと
 
@@ -124,11 +139,72 @@
 
 ---
 
-## 9. 完走後 plugin Claude へ通知
+## 9. catalog auto-pull dev gate
 
-- D user → relay file 経由 / 直接通知:
-  - smoke 結果 (= matrix tick + 異常 flow log + Order notes screenshot 任意)
-  - tx hash 一覧
-  - 発生した不具合 / pending 事項
+### 9.1 pre-state / backup
 
-= plugin Claude r63 (= F step 完了 + codex 査読 + sign-off) → uniple Codex relay。
+1. dev pluginが0.1.11 activeであること、注文総数・最新注文ID、商品数、
+   AI対象meta、root / 商品page HTTPを記録する。
+2. dev plugin tree、WordPress DB、対象options / product meta、
+   dev共有push runnerをbackupし、hash・size・owner・modeを記録する。
+3. Production plugin、Production timer、Production runnerは変更しない。
+4. devの共有push timerだけを一時的に`stop`する。`disable`しない。
+
+### 9.2 exact zip install
+
+1. §0Aで固定したexact zipだけをdevへ配置する。
+2. WordPress標準のplugin update経路で0.1.12へ更新し、active状態を維持する。
+3. plugin directoryのowner / modeを事前の期待値へ戻す。
+4. dev共有push runnerのWordPress stepだけをpackaged
+   `bin/x402_product_sync.php`の`wp eval-file`呼出しへ変更する。
+5. PHP-FPM、Web、checkout、setup、backend、Hosted MCPをrestartしない。
+
+### 9.3 endpoint / manual registration
+
+1. plugin全PHP lint、version、active状態を確認する。
+2. dev rootと商品pageがHTTP 200であることを確認する。
+3. `/wp-json/uniple/v1/catalog`の未署名GETがHTTP 401であることを確認する。
+4. packaged CLIを手動で1回実行し、商品push後の登録が成功することを確認する。
+5. 中央の登録状態が次と一致することを確認する。
+   - endpoint: dev WordPressのHTTPS pretty-permalink catalog URL
+   - platform: `woocommerce`
+   - pluginVersion: `0.1.12`
+   - intervalSeconds: `300`
+   - enabled: `true`
+   - failureCount: `0`
+6. signed pullがHTTP 200、完全snapshot、商品数・active数・revision一致であることを
+   中央のworker結果から確認する。secretや署名値は記録へ出さない。
+
+### 9.4 natural timer gate
+
+1. 停止前にactiveだったdev共有push timerだけを`start`する。
+2. 共有pushのEC-CUBE4 → EC-CUBE2 → WordPress → Shopifyの4 stepが
+   fail-fastせず、2回連続で成功することを確認する。
+3. dev centralの自然pullを2回確認し、両方で次を満たすことを確認する。
+   - attempted / succeeded / failed = `1 / 1 / 0`（対象site）
+   - failureCount = `0`
+   - fetched / upserted / activeが期待値
+   - 同一catalogならrevisionが一致
+4. 注文総数・最新注文ID、商品数、plugin active、root / 商品page HTTPが
+   pre-stateから意図せず変わっていないことを確認する。
+5. WooCommerce設定画面で0.1.12と「5分ごとの自動同期: 登録済み」を確認する。
+6. このcatalog-only releaseのdev gateでは有料決済testを必須にしない。
+
+### 9.5 rollback order
+
+問題時は次の順を守る。
+
+1. dev共有push timerを停止し、0.1.12 CLIによる再登録を防ぐ。
+2. 中央登録のendpoint / platform / pluginVersionが対象dev siteと一致することを
+   読み取り確認する。
+3. 認証済みDELETEでcatalog登録を解除し、`enabled=false`を確認する。
+4. pluginを0.1.11 backupへ戻し、dev共有runnerもbackupへ戻す。
+5. site / order / plugin gateを確認する。原因調査中はtimerを停止したままにする。
+6. DB full restoreはdisaster recoveryであり、明示承認なしに行わない。
+
+## 10. Production gate
+
+dev gateとユーザー画面確認が完了しても、Production反映は別作業である。
+明示承認後にProduction固有のpre-state、backup、exact artifact、限定timer停止、
+post-gate、rollback確認を行う。Production root、checkout、setup、Hosted MCP、
+Shopify credentialはこのplugin releaseに含めない。
