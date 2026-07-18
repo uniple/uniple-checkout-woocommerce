@@ -380,6 +380,7 @@ final class QuoteStore
             && method_exists($wpdb, 'get_var')
             && method_exists($wpdb, 'prepare')
         ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bypasses stale option cache for an authoritative claim read.
             $raw = $wpdb->get_var($wpdb->prepare(
                 "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
                 $key
@@ -406,6 +407,7 @@ final class QuoteStore
         ) {
             $expectedRaw = self::serializeOption($expected);
             $updatedRaw = self::serializeOption($updated);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic compare-and-swap is the claim ownership primitive.
             $changed = $wpdb->query($wpdb->prepare(
                 "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s",
                 $updatedRaw,
@@ -436,6 +438,7 @@ final class QuoteStore
             && method_exists($wpdb, 'query')
             && method_exists($wpdb, 'prepare')
         ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic compare-and-delete prevents deleting another request's claim.
             $deleted = $wpdb->query($wpdb->prepare(
                 "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
                 $key,

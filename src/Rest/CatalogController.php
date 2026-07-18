@@ -126,16 +126,16 @@ final class CatalogController
     private static function externalRequestPath(): string
     {
         $requestUri = isset($_SERVER['REQUEST_URI'])
-            ? (string) $_SERVER['REQUEST_URI']
+            ? sanitize_text_field((string) wp_unslash($_SERVER['REQUEST_URI']))
             : '';
-        $path = parse_url($requestUri, PHP_URL_PATH);
+        $path = wp_parse_url($requestUri, PHP_URL_PATH);
 
         return is_string($path) ? $path : '';
     }
 
     private static function catalogEndpointPath(): string
     {
-        $path = parse_url(
+        $path = wp_parse_url(
             rest_url(WebhookController::ROUTE_NAMESPACE.self::ROUTE),
             PHP_URL_PATH
         );

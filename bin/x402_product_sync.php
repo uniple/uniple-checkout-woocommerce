@@ -4,28 +4,30 @@
  * Scheduled x402 product catalog sync entrypoint for WP-CLI.
  */
 
+defined('ABSPATH') || exit;
+
 use Uniple\CheckoutWooCommerce\Api\UnipleClient;
 use Uniple\CheckoutWooCommerce\Gateway\UnipleGateway;
 use Uniple\CheckoutWooCommerce\X402\ProductSync;
 
-$gateway = new UnipleGateway();
-$client = new UnipleClient($gateway->clientConfig());
-$result = (new ProductSync())->syncAll($client);
+$unipleGateway = new UnipleGateway();
+$unipleClient = new UnipleClient($unipleGateway->clientConfig());
+$unipleResult = (new ProductSync())->syncAll($unipleClient);
 
 update_option('uniple_x402_last_sync_message', sprintf(
     'x402商品同期を実行しました。同期: %d件 / 有効: %d件 / 無効: %d件 / 同期対象外: %d件 (%s) / 5分自動同期: %s',
-    $result['synced'],
-    $result['active'],
-    $result['inactive'],
-    $result['skipped'],
+    $unipleResult['synced'],
+    $unipleResult['active'],
+    $unipleResult['inactive'],
+    $unipleResult['skipped'],
     current_time('mysql'),
-    ($result['autoSync']['ok'] ?? false) === true
-        && !empty($result['autoSync']['status']['enabled'])
+    ($unipleResult['autoSync']['ok'] ?? false) === true
+        && !empty($unipleResult['autoSync']['status']['enabled'])
         ? '登録済み'
         : '登録失敗'
 ), false);
-if (($result['autoSync']['ok'] ?? false) === true
-    && !empty($result['autoSync']['status']['enabled'])
+if (($unipleResult['autoSync']['ok'] ?? false) === true
+    && !empty($unipleResult['autoSync']['status']['enabled'])
 ) {
     delete_option('uniple_x402_last_sync_error');
 } else {
@@ -36,4 +38,7 @@ if (($result['autoSync']['ok'] ?? false) === true
     );
 }
 
-echo wp_json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).PHP_EOL;
+echo wp_json_encode(
+    $unipleResult,
+    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+).PHP_EOL;

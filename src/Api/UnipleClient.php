@@ -487,7 +487,7 @@ final class UnipleClient
                 JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
             );
             if (!is_string($jsonBody)) {
-                throw new RuntimeException($errorCode.': invalid_json');
+                throw new RuntimeException(esc_html($errorCode).': invalid_json');
             }
             $args['headers']['Content-Type'] = 'application/json';
             $args['body'] = $jsonBody;
@@ -498,22 +498,24 @@ final class UnipleClient
             $args
         );
         if (is_wp_error($response)) {
-            throw new RuntimeException($errorCode.': transport_error');
+            throw new RuntimeException(esc_html($errorCode).': transport_error');
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
         $raw = (string) wp_remote_retrieve_body($response);
         if ($status < 200 || $status >= 300) {
-            throw new RuntimeException($errorCode.': status='.esc_html((string) $status));
+            throw new RuntimeException(
+                esc_html($errorCode).': status='.esc_html((string) $status)
+            );
         }
 
         try {
             $payload = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            throw new RuntimeException($errorCode.': invalid_json');
+            throw new RuntimeException(esc_html($errorCode).': invalid_json');
         }
         if (!is_array($payload) || !array_key_exists('ok', $payload) || $payload['ok'] !== true) {
-            throw new RuntimeException($errorCode.': invalid_payload');
+            throw new RuntimeException(esc_html($errorCode).': invalid_payload');
         }
 
         $payload['httpStatus'] = $status;

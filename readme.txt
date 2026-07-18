@@ -2,7 +2,7 @@
 Contributors: uniple
 Tags: woocommerce, payment, checkout, stablecoin, japan
 Requires at least: 6.4
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 8.1
 Stable tag: 0.1.12
 License: GPLv2 or later
@@ -114,6 +114,7 @@ No screenshots are included in this release.
 * Added a signed, read-only WooCommerce catalog endpoint and five-minute central auto-sync registration.
 * Product pushes and pulls now share one deterministic complete snapshot and fail closed instead of partially replacing catalogs over 200 rows.
 * Added registration status to WooCommerce settings and scheduled CLI results.
+* Completed WordPress 7.0 and Plugin Check 2.0 compatibility checks.
 
 = 0.1.11 =
 

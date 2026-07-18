@@ -607,6 +607,7 @@ final class WebhookController
 
         $transactionStarted = false;
         try {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control must use the active WooCommerce DB connection.
             if ($wpdb->query('START TRANSACTION') === false) {
                 return null;
             }
@@ -645,6 +646,7 @@ final class WebhookController
             if (!QuoteStore::attachUnquotedOrder($idempotencyKey, $claimToken, $order->get_id())) {
                 throw new \RuntimeException('unquoted_claim_attach_failed');
             }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Commits the atomic order/claim transaction above.
             if ($wpdb->query('COMMIT') === false) {
                 throw new \RuntimeException('unquoted_order_skeleton_commit_failed');
             }
@@ -653,6 +655,7 @@ final class WebhookController
             return $order;
         } catch (\Throwable $e) {
             if ($transactionStarted) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Rolls back the atomic order/claim transaction above.
                 $wpdb->query('ROLLBACK');
             }
             wc_get_logger()->error(
@@ -806,6 +809,7 @@ final class WebhookController
 
         $transactionStarted = false;
         try {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control must use the active WooCommerce DB connection.
             if ($wpdb->query('START TRANSACTION') === false) {
                 return null;
             }
@@ -856,6 +860,7 @@ final class WebhookController
             if (!QuoteStore::attachOrder($quoteId, $claimToken, $order->get_id())) {
                 throw new \RuntimeException('quote_claim_attach_failed');
             }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Commits the atomic order/claim transaction above.
             if ($wpdb->query('COMMIT') === false) {
                 throw new \RuntimeException('order_skeleton_commit_failed');
             }
@@ -865,6 +870,7 @@ final class WebhookController
             return $order;
         } catch (\Throwable $e) {
             if ($transactionStarted) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Rolls back the atomic order/claim transaction above.
                 $wpdb->query('ROLLBACK');
             }
             QuoteStore::flushCaches($quoteId);
@@ -1439,7 +1445,9 @@ final class WebhookController
         $existing = wc_get_orders([
             'limit' => 1,
             'return' => 'ids',
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Required idempotency lookup, bounded to one WooCommerce order.
             'meta_key' => '_uniple_x402_idempotency_key',
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Required idempotency lookup, bounded to one WooCommerce order.
             'meta_value' => $idempotencyKey,
         ]);
         if (!is_array($existing) || count($existing) === 0) {
@@ -1525,6 +1533,7 @@ final class WebhookController
             && method_exists($wpdb, 'get_var')
             && method_exists($wpdb, 'prepare')
         ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Bypasses stale option cache for an authoritative lock read.
             $raw = $wpdb->get_var($wpdb->prepare(
                 "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1",
                 $key
@@ -1550,6 +1559,7 @@ final class WebhookController
             && method_exists($wpdb, 'prepare')
         ) {
             $raw = function_exists('maybe_serialize') ? maybe_serialize($expected) : serialize($expected);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic compare-and-delete prevents releasing another request's lock.
             $deleted = $wpdb->query($wpdb->prepare(
                 "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s",
                 $key,

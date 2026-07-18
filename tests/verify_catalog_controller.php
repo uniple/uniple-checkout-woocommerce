@@ -76,6 +76,23 @@ namespace {
     {
         return 'https://shop.example.test/store/wp-json/'.ltrim($path, '/');
     }
+
+    function wp_unslash(mixed $value): mixed
+    {
+        return is_string($value) ? stripslashes($value) : $value;
+    }
+
+    function sanitize_text_field(string $value): string
+    {
+        return trim(strip_tags($value));
+    }
+
+    function wp_parse_url(string $url, int $component = -1): array|string|int|false|null
+    {
+        return $component === -1
+            ? parse_url($url)
+            : parse_url($url, $component);
+    }
 }
 
 namespace Uniple\CheckoutWooCommerce\Webhook {

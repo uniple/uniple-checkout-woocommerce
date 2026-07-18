@@ -203,12 +203,13 @@ final class UnipleGateway extends WC_Payment_Gateway
 
         $enabledKey = 'woocommerce_'.$this->id.'_x402_ai_enabled';
         $presentKey = 'woocommerce_'.$this->id.'_x402_ai_enabled_present';
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- WooCommerce verifies its settings nonce before process_admin_options() runs.
         $settingsRequested = isset($_POST[$presentKey]);
         $shouldSync = false;
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
         if ($settingsRequested) {
-            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by WooCommerce settings API (WC_Admin_Settings) before process_admin_options() runs.
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- WooCommerce verifies its settings nonce before process_admin_options() runs.
             $enabled = isset($_POST[$enabledKey]) && is_array($_POST[$enabledKey])
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Same verified WooCommerce settings request.
                 ? array_map('sanitize_text_field', wp_unslash($_POST[$enabledKey]))
                 : [];
             $saved = (new ProductSync())->saveAiTargets($enabled);
