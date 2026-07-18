@@ -23,6 +23,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   central snapshot.
 - Automatic pull registration now fails clearly when WordPress exposes only
   the query-form REST URL instead of an HTTPS pretty-permalink endpoint.
+- Release archives now normalize file modes, timestamps, ordering, and storage
+  so clean clones produce the same ZIP regardless of umask.
+- WordPress 7.0 and Plugin Check 2.0 release checks now pass, including REST
+  request sanitization and direct-access protection for the scheduled CLI.
 
 ## [0.1.11] - 2026-07-15
 

@@ -7,7 +7,8 @@
 ## 0A. 0.1.12 artifact gate
 
 1. release対象をcommitし、worktreeがcleanであることを確認する。
-2. 同一commitからzipを2回生成し、SHA-256が一致することを確認する。
+2. 異なるumaskのclean cloneを含め、同一commitからzipを2回以上生成し、
+   sizeとSHA-256が一致することを確認する。
 3. zipのrootが`uniple-checkout-for-woocommerce/`だけであることを確認する。
 4. 少なくとも次のruntime fileがzipに含まれることを確認する。
    - `src/Rest/CatalogController.php`
@@ -18,6 +19,12 @@
    zipに含まれないことを確認する。
 6. zip内runtimeとrelease commitの対応fileがbyte一致することを確認し、
    commit、artifact名、size、SHA-256を記録する。
+7. 現行WordPress + WooCommerceの隔離siteでPlugin Check 2.0を
+   `--mode=update`と`--include-experimental`の両方で実行し、error 0、
+   warning 0または理由を記録したreview済みwarningだけであることを確認する。
+8. WordPress.org公開中の0.1.10からexact candidate ZIPへ標準updateし、
+   active状態、plugin設定、商品meta、注文status/total/meta/countが不変であることを
+   hash比較する。
 
 ## 0. 事前準備 (= C0 + A + B step 完了済前提)
 

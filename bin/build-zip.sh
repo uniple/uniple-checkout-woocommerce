@@ -68,63 +68,107 @@ git ls-files | while IFS= read -r f; do
     cp -p "$f" "${dest}"
 done
 
-# Normalize file and directory mtimes so repeated builds of the same commit
-# produce the same archive rather than inheriting mktemp directory timestamps.
+# Normalize modes and mtimes so clean clones with different umasks produce the
+# same archive metadata.
+find "${STAGE_PLUGIN_DIR}" -type d -exec chmod 0755 {} +
+while IFS= read -r -d '' staged_file; do
+    if [[ -x "${staged_file}" ]]; then
+        chmod 0755 "${staged_file}"
+    else
+        chmod 0644 "${staged_file}"
+    fi
+done < <(find "${STAGE_PLUGIN_DIR}" -type f -print0)
 find "${STAGE_PLUGIN_DIR}" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 
 OUTPUT_ZIP="${OUTPUT_DIR}/${SLUG}-${VERSION}.zip"
 rm -f "${OUTPUT_ZIP}"
 
-if command -v zip >/dev/null 2>&1; then
-    (
-        cd "${STAGE_DIR}"
-        COPYFILE_DISABLE=1 zip -Xrq "${OUTPUT_ZIP}" "${SLUG}" \
-            -x "*.DS_Store" "*/._*"
-    )
-else
-    php -r '
-        $stage = $argv[1];
-        $slug = $argv[2];
-        $out = $argv[3];
-        $epoch = (int) $argv[4];
-        $zip = new ZipArchive();
-        if ($zip->open($out, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            fwrite(STDERR, "failed to create zip\n");
+if ! command -v php >/dev/null 2>&1; then
+    echo "error: php is required for deterministic zip creation" >&2
+    exit 1
+fi
+if ! php -r 'exit(class_exists("ZipArchive") ? 0 : 1);'; then
+    echo "error: PHP ZipArchive extension is required" >&2
+    exit 1
+fi
+
+php -r '
+    $stage = $argv[1];
+    $slug = $argv[2];
+    $out = $argv[3];
+    $epoch = (int) $argv[4];
+    $zip = new ZipArchive();
+    if ($zip->open($out, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        fwrite(STDERR, "failed to create zip\n");
+        exit(1);
+    }
+    $base = rtrim($stage, "/")."/";
+    $rootEntry = rtrim($slug, "/")."/";
+    if (!$zip->addEmptyDir($rootEntry)) {
+        fwrite(STDERR, "failed to add plugin root directory\n");
+        exit(1);
+    }
+    $entries = [];
+    $iter = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($base.$slug, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    foreach ($iter as $f) {
+        if ($f->isLink()) {
+            fwrite(STDERR, "refusing to package symlink: ".$f->getPathname()."\n");
             exit(1);
         }
-        $base = rtrim($stage, "/")."/";
-        $iter = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($base.$slug, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-        $entries = [];
-        foreach ($iter as $f) {
-            $real = $f->getRealPath();
-            $rel = substr($real, strlen($base));
-            if (preg_match("#(^|/)(\.DS_Store|\._[^/]+)$#", $rel)) {
-                continue;
-            }
-            $entries[$rel] = $real;
+        $real = $f->getRealPath();
+        if (!is_string($real)) {
+            fwrite(STDERR, "failed to resolve staged path\n");
+            exit(1);
         }
-        ksort($entries, SORT_STRING);
-        foreach ($entries as $rel => $real) {
-            $f = new SplFileInfo($real);
-            if ($f->isDir()) {
-                $entryName = rtrim($rel, "/")."/";
-                $zip->addEmptyDir($entryName);
-            } else {
-                $entryName = $rel;
-                $zip->addFile($real, $entryName);
-            }
-            if (!$zip->setMtimeName($entryName, $epoch)) {
-                fwrite(STDERR, "failed to normalize zip entry timestamp: ".$entryName."\n");
-                $zip->close();
+        $rel = substr($real, strlen($base));
+        if (preg_match("#(^|/)(\.DS_Store|\._[^/]+)$#", $rel)) {
+            continue;
+        }
+        $entries[$rel] = $real;
+    }
+    ksort($entries, SORT_STRING);
+    $archiveEntries = [$rootEntry => [null, 040755]];
+    foreach ($entries as $rel => $real) {
+        $f = new SplFileInfo($real);
+        if ($f->isDir()) {
+            $entryName = rtrim($rel, "/")."/";
+            if (!$zip->addEmptyDir($entryName)) {
+                fwrite(STDERR, "failed to add directory: ".$entryName."\n");
                 exit(1);
             }
+            $archiveEntries[$entryName] = [$real, 040755];
+        } else {
+            $entryName = $rel;
+            if (!$zip->addFile($real, $entryName)) {
+                fwrite(STDERR, "failed to add file: ".$entryName."\n");
+                exit(1);
+            }
+            $archiveEntries[$entryName] = [$real, $f->isExecutable() ? 0100755 : 0100644];
         }
-        $zip->close();
-    ' "${STAGE_DIR}" "${SLUG}" "${OUTPUT_ZIP}" "${SOURCE_DATE_EPOCH}"
-fi
+    }
+    foreach ($archiveEntries as $entryName => [, $unixMode]) {
+        if (
+            !$zip->setMtimeName($entryName, $epoch)
+            || !$zip->setCompressionName($entryName, ZipArchive::CM_STORE)
+            || !$zip->setExternalAttributesName(
+                $entryName,
+                ZipArchive::OPSYS_UNIX,
+                $unixMode << 16
+            )
+        ) {
+            fwrite(STDERR, "failed to normalize zip metadata: ".$entryName."\n");
+            $zip->close();
+            exit(1);
+        }
+    }
+    if (!$zip->close()) {
+        fwrite(STDERR, "failed to finalize zip\n");
+        exit(1);
+    }
+' "${STAGE_DIR}" "${SLUG}" "${OUTPUT_ZIP}" "${SOURCE_DATE_EPOCH}"
 
 echo "built: ${OUTPUT_ZIP}"
 ls -lh "${OUTPUT_ZIP}"
